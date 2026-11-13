@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Starts the dependencies, migrates the database, creates the S3 bucket and starts the services and Station.
-# Stacks built on Face Matcher run this first; they may export STATION_IDENTIFICATION and STATION_PUBLIC_HOST.
+# Starts the dependencies, migrates the database, creates the S3 bucket and starts the services and Face Matcher UI.
+# Stacks built on Face Matcher run this first; they may export FACE_MATCHER_UI_IDENTIFICATION.
 
 set -e
 
@@ -22,9 +22,6 @@ chmod a+r secrets/iengine.lic
 # the services mount iengine.lic from the deployment directory
 [ -e iengine.lic ] || ln -sf secrets/iengine.lic iengine.lic
 chmod a+r iengine.lic
-
-# Station hands the browser presigned S3 URLs; they must point at this host
-export STATION_PUBLIC_HOST="${STATION_PUBLIC_HOST:-$(hostname)}"
 
 # face-matcher-network lets the dependency and the platform containers reach each other.
 # This is a no-op if the network already exists, which we don't mind.
@@ -65,10 +62,10 @@ docker run --rm --name s3-bucket-create --network face-matcher-network "${ADMIN_
         --endpoint "$(getvalue S3Bucket__Endpoint)" --access-key "$(getvalue S3Bucket__AccessKey)" \
         --secret-key "$(getvalue S3Bucket__SecretKey)" --bucket-name "$(getvalue S3Bucket__BucketName)"
 
-# finally start the services and Station (docker-compose.override.yml)
+# finally start the services and Face Matcher UI (docker-compose.override.yml)
 docker compose up -d
 
 echo ""
-echo "Station     : http://localhost:$(getvalue STATION_PORT)"
-echo "REST API    : http://localhost:8098"
-echo "GraphQL API : http://localhost:8097/graphql"
+echo "Face Matcher UI : http://localhost:$(getvalue FACE_MATCHER_UI_PORT)"
+echo "REST API        : http://localhost:8098"
+echo "GraphQL API     : http://localhost:8097/graphql"

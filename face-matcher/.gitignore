@@ -2,6 +2,10 @@
 secrets/*.lic
 /iengine.lic
 
+# Only at a site that turns the login on: the client secret, the TLS key and certificate — never commit
+secrets/*.env
+secrets/tls/
+
 # Local-only tooling — never commit
 .local/
 
