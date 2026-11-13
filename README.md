@@ -1,14 +1,18 @@
 # Smart Corridor
 
+> [!CAUTION]
+> **THIS IS FOR EVALUATION PURPOSES.**
+> Has no Auth. In a corridor the login stays off: see [Login](#login).
+
 Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `face-matcher/` and started by `start.sh`.
 
 # Deployment
 
 1. Install `Docker` and `docker compose` on the host machine.
-2. Login to container registry `docker login registry.dot.innovatrics.com -u <username> -p <password>`. The credentials are available in our [Customer Portal](https://customerportal.innovatrics.com/).
+2. Login to container registry `docker login registry.dot.innovatrics.com -u <username> -p <password>`. The credentials are available in our [Customer Portal](https://customerportal.innovatrics.com/). The images are not public: your account needs the right to pull from two projects of the registry, `vpp/` (the platform) and `border-control/` (the corridor services and Face Matcher UI). If a pull is refused with `unauthorized`, your account lacks that right; ask your Innovatrics contact for it.
 3. Identify hardware id (hwid) for your machine with command `docker run --rm registry.dot.innovatrics.com/vpp/license-manager:3.2.7`.
 4. Obtain a license with the `smart_corridor` block for your hwid from our Customer Portal https://customerportal.innovatrics.com/
-5. Copy the license file `iengine.lic` to `secrets/`.
+5. Copy the license file `iengine.lic` to `secrets/`. The registry holds the images only, never a license: the license is bought, or a trial is asked for at your Innovatrics sales representative.
 6. Run `start.sh`.
 
 The dashboard is at http://localhost:8095.
@@ -29,7 +33,7 @@ MCT is not started or stopped by these scripts. See below.
 | Hub GraphQL        | http://localhost:8090/corridor-hub/graphql  |                            |
 | Hub GraphiQL       | http://localhost:8090/corridor-hub/graphiql |                            |
 | CIGS health        | http://localhost:8096/actuator/health       |                            |
-| Station            | http://localhost:8000                       |                            |
+| Face Matcher UI    | http://localhost:8000                       |                            |
 | REST API           | http://localhost:8098                       |                            |
 | GraphQL API        | http://localhost:8097/graphql               |                            |
 | RabbitMQ           | http://localhost:15672                      | guest / guest              |
@@ -42,9 +46,13 @@ Ports are published on all interfaces with default credentials. Do not expose th
 
 - `.env` - corridor image versions and the dashboard port
 - `.env.hub` - Hub: denied watchlists (RED), dead-letter expiry, database, corridor units and their cameras, storage, zone notifications. Documented inline.
-- `face-matcher/` - a copy of the Face Matcher repository. Do not edit it, with one exception: `face-matcher/.env.station` is pre-configured with the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`). To upgrade, replace the directory with a checkout of the new release and carry that label block over. `start.sh` runs it with `STATION_IDENTIFICATION=false`.
+- `face-matcher/` - a copy of the Face Matcher repository. Do not edit it, with one exception: `face-matcher/.env.face-matcher-ui` is pre-configured with the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`). To upgrade, replace the directory with a checkout of the new release and carry that label block over. `start.sh` runs it with `FACE_MATCHER_UI_IDENTIFICATION=false`.
 
 All services join `face-matcher-network`, created by Face Matcher. The corridor services use only what [`face-matcher/README.md`](face-matcher/README.md#integration) lists.
+
+## Login
+
+The login of Face Matcher UI is off, and in a Smart Corridor it stays off. The Hub, CIGS and the dashboard call Face Matcher's API without a token, so that API cannot be protected here; a login on the UI alone would protect one port while the API behind it stays open, and the dashboard's camera preview cannot sign in. Run the corridor on a trusted network only. A protected corridor will come with a gateway in front of its services, in a later release. For a standalone Face Matcher see [`face-matcher/README.md`](face-matcher/README.md#turning-the-login-on), "Turning the login on".
 
 ## Zone notifications (Hub 0.4.0 and newer)
 
@@ -53,6 +61,15 @@ The Hub can emit `zone.*` notifications (person entered, left, moved, occupancy,
 ## Clearance
 
 The Hub clears every watchlist match GREEN unless the matched watchlist is listed in `VPP_ADAPTER_DENIED_WATCHLISTS` (`.env.hub`; watchlist ids as the platform reports them in a match, or globs such as `red.*`); such a match is RED. An empty list makes every match GREEN, `*` makes every match RED. The dashboard names the watchlist on each card and shows the enrolled face of the matched member next to the live one.
+
+## Upgrading to Face Matcher v2.0.0: Face Matcher UI in place of Station
+
+- SmartFace Station is replaced by Face Matcher UI 2.1.0, from the registry project `border-control/`: the service and container `fm-station` are now `face-matcher-ui`, still on port 8000. A system that called `fm-station:8000` on `face-matcher-network` calls `face-matcher-ui:8000`.
+- `face-matcher/.env.station` is now `face-matcher/.env.face-matcher-ui`, and `branding/station/` is `branding/face-matcher-ui/`. Carry the label block over into the new file, as for every upgrade of `face-matcher/`.
+- `start.sh` exports `FACE_MATCHER_UI_IDENTIFICATION` in place of `STATION_IDENTIFICATION`; `STATION_PUBLIC_HOST` is gone.
+- The dashboard's camera preview points at `http://face-matcher-ui:8000` (`FACE_MATCHER_STATION_URL` in `docker-compose.yml`).
+
+Run `stop.sh`, replace the directories, and run `start.sh`. The old container `fm-station` is removed as an orphan by Face Matcher's `run.sh`.
 
 ## Upgrading from Hub 0.9.2 / dashboard 0.9.1
 
