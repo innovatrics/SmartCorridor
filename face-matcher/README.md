@@ -128,7 +128,7 @@ Face Matcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_E
 
 - `docker-compose.yml`, `.env` - `grouping` and `video-*` services and their settings removed
 - `.env` - `REGISTRY` points to Harbor; `Notifications__IncludeTemplates=true`; `Milvus__*` removed; section 4 added
-- `dependencies/docker-compose.yml` - Milvus removed; RabbitMQ pinned to 4.3.6 with `queue_master_locator` permitted; one SeaweedFS data mount
+- `dependencies/docker-compose.yml` - Milvus removed; RabbitMQ pinned to 4.3.6 with `queue_master_locator` permitted; one SeaweedFS data mount; the published ports bind to `DEPENDENCIES_BIND_ADDRESS` when it is set in the environment of `run.sh`
 - `run.sh` - license from `secrets/` and the endpoint summary added; Milvus wait removed
 - `deployment-common.sh` - Milvus wait removed
 - `sync-embeddings-to-vector-db.sh`, `migrate-palms.sh`, `finalize-non-migrated-palms.sh` - deleted
@@ -204,6 +204,7 @@ A stack built on Face Matcher may rely on the following. Everything else is inte
 | Face Matcher UI | `face-matcher-ui:8000`                                                                              |
 | Admin image     | `${REGISTRY}admin:${VERSION}` from `.env`                                                            |
 | Start order     | Face Matcher first. `run.sh` reads `FACE_MATCHER_UI_IDENTIFICATION` from the environment.            |
+| Ports           | A stack with its own entry point may run `run.sh` with `DEPENDENCIES_BIND_ADDRESS=127.0.0.1`: PostgreSQL, pgAdmin, RabbitMQ and S3 are then published on the host's loopback only. |
 
 Credentials are in `.env`.
 
