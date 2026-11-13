@@ -2,7 +2,7 @@
 
 > [!CAUTION]
 > **THIS IS FOR EVALUATION PURPOSES.**
-> Has no Auth. In a corridor the login stays off: see [Login](#login).
+> Has no Auth unless the gateway is on: see [Login](#login) and [The gateway](#the-gateway).
 
 Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `face-matcher/` and started by `start.sh`.
 
@@ -15,7 +15,7 @@ Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub t
 5. Copy the license file `iengine.lic` to `secrets/`. The registry holds the images only, never a license: the license is bought, or a trial is asked for at your Innovatrics sales representative.
 6. Run `start.sh`.
 
-The dashboard is at http://localhost:8095.
+The dashboard is at http://localhost:8095. With the gateway on, everything is behind a login and HTTPS: see [The gateway](#the-gateway).
 
 ## Scripts
 
@@ -26,6 +26,8 @@ The dashboard is at http://localhost:8095.
 MCT is not started or stopped by these scripts. See below.
 
 ## Endpoints
+
+Without the gateway (`CORRIDOR_GATEWAY_ENABLED=false`, as shipped):
 
 | Service            | URL                                         | Credentials                |
 | ------------------ | ------------------------------------------- | -------------------------- |
@@ -40,11 +42,11 @@ MCT is not started or stopped by these scripts. See below.
 | SeaweedFS (S3)     | http://localhost:8333                       | admin / admin              |
 | pgAdmin            | http://localhost:7070                       | admin@admin.com / Test1234 |
 
-Ports are published on all interfaces with default credentials. Do not expose the host to an untrusted network.
+Ports are published on all interfaces with default credentials. Do not expose the host to an untrusted network. With the gateway on, see [The gateway](#the-gateway) for the ports.
 
 ## Configuration
 
-- `.env` - corridor image versions and the dashboard port
+- `.env` - corridor image versions, the dashboard port, and the gateway: `CORRIDOR_GATEWAY_ENABLED`, `CORRIDOR_HOST`, its images
 - `.env.hub` - Hub: denied watchlists (RED), dead-letter expiry, database, corridor units and their cameras, storage, zone notifications. Documented inline.
 - `face-matcher/` - a copy of the Face Matcher repository. Do not edit it, with one exception: `face-matcher/.env.face-matcher-ui` is pre-configured with the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`). To upgrade, replace the directory with a checkout of the new release and carry that label block over. `start.sh` runs it with `FACE_MATCHER_UI_IDENTIFICATION=false`.
 
@@ -52,7 +54,63 @@ All services join `face-matcher-network`, created by Face Matcher. The corridor 
 
 ## Login
 
-The login of Face Matcher UI is off, and in a Smart Corridor it stays off. The Hub, CIGS and the dashboard call Face Matcher's API without a token, so that API cannot be protected here; a login on the UI alone would protect one port while the API behind it stays open, and the dashboard's camera preview cannot sign in. Run the corridor on a trusted network only. A protected corridor will come with a gateway in front of its services, in a later release. For a standalone Face Matcher see [`face-matcher/README.md`](face-matcher/README.md#turning-the-login-on), "Turning the login on".
+As shipped, nothing in the corridor asks anyone to sign in, and Face Matcher UI's own login stays off. Run the corridor on a trusted network only. The Hub, CIGS and the dashboard call Face Matcher's API without a token, so a login on the UI alone would protect one port while the API behind it stays open: the corridor is protected as a whole, by the gateway in front of all its services. For a standalone Face Matcher see [`face-matcher/README.md`](face-matcher/README.md#turning-the-login-on), "Turning the login on".
+
+## The gateway
+
+With `CORRIDOR_GATEWAY_ENABLED=true` in `.env`, `start.sh` puts a gateway (Envoy) and the corridor's own Keycloak in front of the whole corridor. The gateway is then the only container that publishes ports, every port is HTTPS, a person signs in on Keycloak, a system sends a token, and the gateway checks the role. The services behind it run as before, without authentication, on `face-matcher-network`; they get neither the session cookies nor the tokens.
+
+| Port | What                     | Who                                   | Role                                                           |
+| ---- | ------------------------ | ------------------------------------- | -------------------------------------------------------------- |
+| 8095 | Corridor dashboard       | operators, wall displays: sign-in     | `corridor-operator`                                            |
+| 8000 | Face Matcher UI          | administrators: sign-in               | `face-matcher-admin`                                           |
+| 8090 | Hub API                  | systems: bearer token                 | `corridor-integrator`; `/corridor-hub/admin/`: `corridor-admin` |
+| 8098 | Face Matcher REST API    | systems: bearer token                 | `corridor-integrator` or `corridor-admin`                      |
+| 8097 | Face Matcher GraphQL API | systems: bearer token                 | `corridor-integrator` or `corridor-admin`                      |
+| 8443 | Keycloak                 | everyone: the login pages and tokens  | —                                                              |
+| 8883 | MQTT over TLS            | cameras that publish to the broker    | the broker's own credentials                                   |
+
+Nothing else is published: not CIGS, not the camera previews, not the synchronization leader. PostgreSQL, pgAdmin, RabbitMQ and S3 are published on the host's loopback only, for the person at the machine.
+
+### Turning it on
+
+1. In `.env`, set `CORRIDOR_GATEWAY_ENABLED=true` and `CORRIDOR_HOST` to the one name (or IPv4 address) operators and systems use for this host. The login works under that name only; opened under another name or address, Keycloak refuses the sign-in.
+2. Put the site's certificate for `CORRIDOR_HOST` into `secrets/tls/server.crt` (the certificate first, then its chain) and its key into `secrets/tls/server.key`. Without them, `start.sh` makes a self-signed certificate: browsers warn about it, and every client has to trust it. Good for an evaluation only.
+3. Run `start.sh`. The first start writes the gateway's secrets into `secrets/gateway/` and imports the realm `corridor` into Keycloak; both are kept afterwards.
+4. Make the accounts, with Keycloak running:
+
+   ```
+   gateway/users.sh add-user display-gate-1 corridor-operator
+   gateway/users.sh add-user jane.doe face-matcher-admin corridor-admin
+   gateway/users.sh add-integrator border-system
+   gateway/users.sh list
+   ```
+
+   `add-user` prints a one-time password; the first sign-in asks for a new one (at least 12 characters). `add-integrator` prints the client's secret: the system gets a token with it from `https://<CORRIDOR_HOST>:8443/realms/corridor/protocol/openid-connect/token` (`grant_type=client_credentials`, the client id and secret as HTTP Basic authentication) and sends it as `Authorization: Bearer <token>`, for the Hub's subscription too. A token lives 5 minutes; ask for a new one before it ends.
+
+Keycloak's administration console is not published. `gateway/users.sh` uses Keycloak's admin CLI inside its container; Keycloak's administrator password is in `secrets/gateway/keycloak.env`.
+
+### Sessions
+
+- **People** sign in once per session: Keycloak ends a session after 30 minutes without use and after 10 hours at most. The gateway renews the 5-minute token by itself in between.
+- **A wall display** signed in on port 8095 keeps its session: it ends only after 30 days without use, or when it is revoked. The browser of the display must keep its profile (cookies), or every restart asks for the password again. Give a display an account of its own with `corridor-operator` only.
+- **Revoke** a session, a display's included: `gateway/users.sh revoke <name>`. It takes effect within the token's 5 minutes; the screen then shows the login page.
+- **Sign out**: `https://<CORRIDOR_HOST>:<port>/oauth2/signout` ends the gateway's session and Keycloak's.
+
+These lifetimes are set in `gateway/realm/corridor-realm.json` and imported at the first start only; later, change them in Keycloak (admin CLI) or start from a factory reset.
+
+### What it does not protect
+
+- Inside `face-matcher-network` everything stays plain HTTP without authentication: whoever runs a container on this host, or reaches the network, reaches every service directly.
+- The default credentials of PostgreSQL, RabbitMQ, S3 and pgAdmin (in `face-matcher/.env` and `face-matcher/dependencies/docker-compose.yml`) still apply on the host's loopback and inside the network. Change them before production use.
+- MQTT clients are authenticated by the broker, not by the gateway.
+
+### Turning it off, upgrading, changing the name
+
+- `CORRIDOR_GATEWAY_ENABLED=false` and `start.sh`: the gateway and Keycloak are removed and the ports are published as before, without any login. Keycloak's accounts stay in its database for the next time.
+- `CORRIDOR_HOST` is part of the accounts' clients in Keycloak: after changing it, start from `factory-reset.sh` (which deletes all accounts) or correct the redirect addresses of the clients `corridor-gateway` and `corridor-display` in Keycloak.
+- `factory-reset.sh` deletes Keycloak's database with the corridor's; `secrets/` is kept, so the next start reuses the same secrets and certificate.
+- The gateway loads Keycloak's signing keys when it starts and keeps them for 5 minutes. `start.sh` recreates it; a gateway left running while Keycloak got new keys (a new database) refuses the new tokens for up to 5 minutes.
 
 ## Zone notifications (Hub 0.4.0 and newer)
 
@@ -141,4 +199,4 @@ Set `ZONE_MCT_ENABLED=true` in `.env.hub` for the Hub to consume the track strea
 
 ## Production use
 
-This deployment demonstrates the configuration needed to wire everything up. Change the credentials and restrict the published ports before production use.
+This deployment demonstrates the configuration needed to wire everything up. Before production use, turn the gateway on with the site's own certificate, and change the default credentials of the platform's dependencies.
