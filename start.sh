@@ -3,8 +3,8 @@ set -e
 
 # Starts Face Matcher (face-matcher/), then the corridor services. MCT is separate, see README.md.
 
-export STATION_IDENTIFICATION=false
-export STATION_PUBLIC_HOST="${STATION_PUBLIC_HOST:-$(hostname)}"
+# Face Matcher UI shows no identification view in a corridor: the dashboard shows the matches.
+export FACE_MATCHER_UI_IDENTIFICATION=false
 
 # One license for everything. Face Matcher looks for it in its own secrets/.
 if [ ! -f ./secrets/iengine.lic ]; then
@@ -54,6 +54,6 @@ echo ""
 echo "Corridor dashboard : http://localhost:8095"
 echo "Hub GraphQL        : http://localhost:8090/corridor-hub/graphql"
 echo "CIGS health        : http://localhost:8096/actuator/health"
-echo "Station            : http://localhost:8000"
+echo "Face Matcher UI    : http://localhost:8000"
 echo "REST API           : http://localhost:8098"
 echo "GraphQL API        : http://localhost:8097/graphql"

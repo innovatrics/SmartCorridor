@@ -78,8 +78,8 @@ services:
       # CORRIDOR_SCORE_BANDS: '{"threshold":80,"lower":{"label":"Low","positive":"#f5d547","negative":"#ffa726"},"upper":{"label":"High","positive":"#59e670","negative":"#e65959"}}'
       # Operator words: unidentified, cleared, blacklisted, deniedWatchlist, liveFace, enrolledFace, connectionLost.
       # CORRIDOR_PRESENTATION_LABELS: '{"unidentified":"Unidentified"}'
-      # Station serves the live camera preview through the frontend nginx. Unset: Cameras panel shows "unavailable".
-      FACE_MATCHER_STATION_URL: http://fm-station:8000
+      # Face Matcher UI serves the live camera preview through the frontend nginx. Unset: Cameras panel shows "unavailable".
+      FACE_MATCHER_STATION_URL: http://face-matcher-ui:8000
     # Requires the smart_corridor.operational_display license block.
     volumes:
       - ./secrets/iengine.lic:/etc/innovatrics/iengine.lic:ro
