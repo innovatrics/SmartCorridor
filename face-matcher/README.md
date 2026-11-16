@@ -1,8 +1,8 @@
 # Face Matcher
 
 > [!CAUTION]
-> **THIS IS FOR EVALUATION PURPOSES.**
-> Has no Auth. For prod turn on auth: see [Turning the login on](#turning-the-login-on).
+> **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.**
+> Has no Auth by default. For prod turn on auth: see [Turning the login on](#turning-the-login-on).
 
 Face Matcher is a real-time face identification server. It processes video streams, matches faces against watchlists and publishes the results over REST, GraphQL and RabbitMQ. Face Matcher UI is the web UI for watchlists, cameras, live previews and 1:N search.
 
@@ -52,7 +52,7 @@ Not deployed: offline video processing, grouping, Milvus, Access Controller. The
 
 ## Turning the login on
 
-This section is for a standalone Face Matcher. In a Smart Corridor the login stays off; the Smart Corridor README says why, in its section "Login".
+This section is for a standalone Face Matcher. In a Smart Corridor, Face Matcher UI's own login stays off: the corridor's gateway signs users in, in front of all its services; see the Smart Corridor README, "The gateway".
 
 Face Matcher UI signs its users in through Keycloak (OpenID Connect). It has no other login.
 

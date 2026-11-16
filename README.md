@@ -1,8 +1,8 @@
 # Smart Corridor
 
 > [!CAUTION]
-> **THIS IS FOR EVALUATION PURPOSES.**
-> Has no Auth unless the gateway is on: see [Login](#login) and [The gateway](#the-gateway).
+> **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.**
+> Has no Auth by default. For prod turn on auth, the gateway: see [The gateway](#the-gateway).
 
 Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `face-matcher/` and started by `start.sh`.
 
@@ -54,7 +54,7 @@ All services join `face-matcher-network`, created by Face Matcher. The corridor 
 
 ## Login
 
-As shipped, nothing in the corridor asks anyone to sign in, and Face Matcher UI's own login stays off. Run the corridor on a trusted network only. The Hub, CIGS and the dashboard call Face Matcher's API without a token, so a login on the UI alone would protect one port while the API behind it stays open: the corridor is protected as a whole, by the gateway in front of all its services. For a standalone Face Matcher see [`face-matcher/README.md`](face-matcher/README.md#turning-the-login-on), "Turning the login on".
+As shipped, nothing in the corridor asks anyone to sign in (`CORRIDOR_GATEWAY_ENABLED=false`), and Face Matcher UI's own login stays off. Run it like that for demos and evaluation only, on a trusted network. The Hub, CIGS and the dashboard call Face Matcher's API without a token, so a login on the UI alone would protect one port while the API behind it stays open: the corridor is protected as a whole, by the gateway in front of all its services: turn it on as [The gateway](#the-gateway) says. For a standalone Face Matcher see [`face-matcher/README.md`](face-matcher/README.md#turning-the-login-on), "Turning the login on".
 
 ## The gateway
 
