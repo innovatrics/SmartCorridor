@@ -94,7 +94,7 @@ Keycloak's administration console is not published. `gateway/users.sh` uses Keyc
 
 - **People** sign in once per session: Keycloak ends a session after 30 minutes without use and after 10 hours at most. The gateway renews the 5-minute token by itself in between.
 - **A wall display** signed in on port 8095 keeps its session: it ends only after 30 days without use, or when it is revoked. The browser of the display must keep its profile (cookies), or every restart asks for the password again. Give a display an account of its own with `corridor-operator` only.
-- **Revoke** a session, a display's included: `gateway/users.sh revoke <name>`. It takes effect within the token's 5 minutes; the screen then shows the login page.
+- **Revoke** a session, a display's included: `gateway/users.sh revoke <name>`. It takes effect within the token's 5 minutes: from then on the gateway refuses the display's data requests, and the next load of the page asks for the password. A screen that is open stays on its last state until it is loaded again; restart the display's browser to make sure.
 - **Sign out**: `https://<CORRIDOR_HOST>:<port>/oauth2/signout` ends the gateway's session and Keycloak's.
 
 These lifetimes are set in `gateway/realm/corridor-realm.json` and imported at the first start only; later, change them in Keycloak (admin CLI) or start from a factory reset.
