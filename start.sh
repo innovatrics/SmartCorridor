@@ -24,12 +24,25 @@ SELECT 'CREATE DATABASE corridorhub' WHERE NOT EXISTS (SELECT FROM pg_database W
 SQL
 
 # Create the Hub's crop bucket on the platform's S3 storage.
+# The admin command gives S3 5 seconds and does not retry. SeaweedFS can be slower than that
+# while the platform services start, so retry; an existing bucket counts as success.
 PLATFORM=./face-matcher
 getvalue() { grep -E "^$1=" "$PLATFORM/.env" | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r$//' -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]+$//'; }
-docker run --rm --network face-matcher-network "$(getvalue REGISTRY)admin:$(getvalue VERSION)" \
-  ensure-s3-bucket-exists \
-    --endpoint "$(getvalue S3Bucket__Endpoint)" --access-key "$(getvalue S3Bucket__AccessKey)" \
-    --secret-key "$(getvalue S3Bucket__SecretKey)" --bucket-name corridor-hub
+BUCKET_ATTEMPTS=12
+for attempt in $(seq 1 "$BUCKET_ATTEMPTS"); do
+  if docker run --rm --network face-matcher-network "$(getvalue REGISTRY)admin:$(getvalue VERSION)" \
+    ensure-s3-bucket-exists \
+      --endpoint "$(getvalue S3Bucket__Endpoint)" --access-key "$(getvalue S3Bucket__AccessKey)" \
+      --secret-key "$(getvalue S3Bucket__SecretKey)" --bucket-name corridor-hub; then
+    break
+  fi
+  if [ "$attempt" -eq "$BUCKET_ATTEMPTS" ]; then
+    echo "ERROR: could not create the corridor-hub bucket on $(getvalue S3Bucket__Endpoint) after $BUCKET_ATTEMPTS attempts. Check 'docker logs seaweedfs'." >&2
+    exit 1
+  fi
+  echo "Bucket corridor-hub not created yet (attempt $attempt/$BUCKET_ATTEMPTS), retrying in 5 s..." >&2
+  sleep 5
+done
 
 # Give the platform APIs a head start before Hub and CIGS connect.
 sleep 10
