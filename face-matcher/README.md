@@ -145,7 +145,7 @@ A site with the login on: a new version of this package brings `.env.face-matche
 
 ## Upgrading from v1.0.0
 
-v1.0.0 ran SmartFace Station. This version runs Face Matcher UI 2.1.0 in its place, on the same port. The old names are gone, without aliases:
+v1.0.0 ran SmartFace Station. This version runs Face Matcher UI 2.1.1 in its place, on the same port. The old names are gone, without aliases:
 
 | v1.0.0                                                      | Now                                                                                  |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -156,7 +156,7 @@ v1.0.0 ran SmartFace Station. This version runs Face Matcher UI 2.1.0 in its pla
 | `STATION_VERSION`, `STATION_PORT`, `STATION_IDENTIFICATION` | `FACE_MATCHER_UI_VERSION`, `FACE_MATCHER_UI_PORT`, `FACE_MATCHER_UI_IDENTIFICATION`  |
 | `STATION_PUBLIC_HOST`, `S3_PUBLIC_ENDPOINT`                 | removed: the UI serves the members' photos itself                                    |
 
-1. Before stopping anything, try `docker pull registry.dot.innovatrics.com/border-control/face-matcher-ui:2.1.0`. If it is refused with `unauthorized`, your registry account lacks the right to pull from `border-control/`; ask your Innovatrics contact for it first.
+1. Before stopping anything, try `docker pull registry.dot.innovatrics.com/border-control/face-matcher-ui:2.1.1`. If it is refused with `unauthorized`, your registry account lacks the right to pull from `border-control/`; ask your Innovatrics contact for it first.
 2. Carry your own values from `.env.station` over into `.env.face-matcher-ui`: `BLACKLIST_WATCHLIST_IDS`, the `WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n` labels, `CAM_PREVIEW_HOST_*`, `SCORE_CONVERSION_*`. Leave Station's `S3_*`, `AUTH0_*`, `KEYCLOAK_*` and `ROLE_KEY_*` lines behind: Face Matcher UI does not read them, and its Keycloak login is set up as described in [Turning the login on](#turning-the-login-on).
 3. Carry your own logos over into `branding/face-matcher-ui/`. Of `naming-product.json` the UI reads `windowTitle` and `configSection`.
 4. Change what you built on the old names: `fm-station:8000` is now `face-matcher-ui:8000`, and `run.sh` reads `FACE_MATCHER_UI_IDENTIFICATION` in place of `STATION_IDENTIFICATION`.

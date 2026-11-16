@@ -122,7 +122,7 @@ The Hub clears every watchlist match GREEN unless the matched watchlist is liste
 
 ## Upgrading to Face Matcher v2.0.0: Face Matcher UI in place of Station
 
-- SmartFace Station is replaced by Face Matcher UI 2.1.0, from the registry project `border-control/`: the service and container `fm-station` are now `face-matcher-ui`, still on port 8000. A system that called `fm-station:8000` on `face-matcher-network` calls `face-matcher-ui:8000`.
+- SmartFace Station is replaced by Face Matcher UI 2.1.1, from the registry project `border-control/`: the service and container `fm-station` are now `face-matcher-ui`, still on port 8000. A system that called `fm-station:8000` on `face-matcher-network` calls `face-matcher-ui:8000`.
 - `face-matcher/.env.station` is now `face-matcher/.env.face-matcher-ui`, and `branding/station/` is `branding/face-matcher-ui/`. Carry the label block over into the new file, as for every upgrade of `face-matcher/`.
 - `start.sh` exports `FACE_MATCHER_UI_IDENTIFICATION` in place of `STATION_IDENTIFICATION`; `STATION_PUBLIC_HOST` is gone.
 - The dashboard's camera preview points at `http://face-matcher-ui:8000` (`FACE_MATCHER_STATION_URL` in `docker-compose.yml`).
