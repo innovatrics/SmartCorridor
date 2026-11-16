@@ -49,9 +49,20 @@ services:
     user: root
   graphql-api:
     restart: unless-stopped
+    # Only with the APIs' authentication on and a Keycloak certificate from a private authority (README, "What stays
+    # open with the login on"): the APIs trust that authority, secrets/tls/ca.crt.
+    # environment:
+    #   SSL_CERT_FILE: /certs/ca.crt
+    # volumes:
+    #   - ./secrets/tls/ca.crt:/certs/ca.crt:ro
   api:
     restart: unless-stopped
     user: root
+    # Only with the APIs' authentication on and a Keycloak certificate from a private authority: as at graphql-api.
+    # environment:
+    #   SSL_CERT_FILE: /certs/ca.crt
+    # volumes:
+    #   - ./secrets/tls/ca.crt:/certs/ca.crt:ro
   detector:
     restart: unless-stopped
     user: root
