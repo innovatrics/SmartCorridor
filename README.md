@@ -2,7 +2,7 @@
 
 > [!CAUTION]
 > **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.**
-> Has no Auth by default. For prod turn on auth, the gateway: see [The gateway](#the-gateway).
+> Has no Auth by default. For prod turn on auth, the gateway: see [The gateway](#the-gateway) and the [documentation](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/).
 
 Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `face-matcher/` and started by `start.sh`.
 
@@ -58,7 +58,7 @@ As shipped, nothing in the corridor asks anyone to sign in (`CORRIDOR_GATEWAY_EN
 
 ## The gateway
 
-With `CORRIDOR_GATEWAY_ENABLED=true` in `.env`, `start.sh` puts a gateway (Envoy) and the corridor's own Keycloak in front of the whole corridor. The gateway is then the only container that publishes ports, every port is HTTPS, a person signs in on Keycloak, a system sends a token, and the gateway checks the role. The services behind it run as before, without authentication, on `face-matcher-network`; they get neither the session cookies nor the tokens.
+With `CORRIDOR_GATEWAY_ENABLED=true` in `.env`, `start.sh` puts a gateway (Envoy) and the corridor's own Keycloak in front of the whole corridor. The official documentation: [Smart Biometric Corridors](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/). The gateway is then the only container that publishes ports, every port is HTTPS, a person signs in on Keycloak, a system sends a token, and the gateway checks the role. The services behind it run as before, without authentication, on `face-matcher-network`; they get neither the session cookies nor the tokens.
 
 | Port | What                     | Who                                   | Role                                                           |
 | ---- | ------------------------ | ------------------------------------- | -------------------------------------------------------------- |
