@@ -1,0 +1,65 @@
+# The gateway (CORRIDOR_GATEWAY_ENABLED=true in .env): start.sh adds this file to docker-compose.yml.
+# The corridor services publish no port any more; Envoy publishes the ones people and systems use, over HTTPS
+# with a Keycloak login, and Keycloak runs beside it. See README.md, "The gateway".
+services:
+  hub:
+    ports: !reset []
+  cigs:
+    ports: !reset []
+  frontend:
+    ports: !reset []
+
+  gateway:
+    image: ${GATEWAY_IMAGE}
+    container_name: sceg-gateway
+    restart: unless-stopped
+    # The user who ran start.sh: it owns the secrets in secrets/, which no one else may read.
+    user: "${CORRIDOR_UID_GID:?start.sh sets it}"
+    entrypoint: ["/bin/sh", "/etc/envoy/start-gateway.sh"]
+    environment:
+      CORRIDOR_HOST: ${CORRIDOR_HOST:?start.sh sets it}
+    ports:
+      - "8095:8095"   # Operational Display
+      - "8000:8000"   # Face Matcher UI
+      - "8090:8090"   # Corridor Hub API
+      - "8098:8098"   # Face Matcher REST API
+      - "8097:8097"   # Face Matcher GraphQL API
+      - "8443:8443"   # Keycloak: the login pages and the token endpoint
+      - "8883:8883"   # MQTT over TLS, for cameras that publish to the broker
+    volumes:
+      - ./gateway/envoy.yaml.tmpl:/etc/envoy/envoy.yaml.tmpl:ro
+      - ./gateway/start-gateway.sh:/etc/envoy/start-gateway.sh:ro
+      - ./secrets/gateway:/etc/envoy-secrets:ro
+      - ./secrets/tls:/etc/envoy-tls:ro
+
+  keycloak:
+    image: ${KEYCLOAK_IMAGE}
+    container_name: sceg-keycloak
+    restart: unless-stopped
+    # Imports gateway/realm/corridor-realm.json at its first start only; later edits of that file change nothing.
+    command: ["start", "--import-realm"]
+    env_file:
+      # written by start.sh: the database password, the administrator's password and the clients' secrets
+      - path: ./secrets/gateway/keycloak.env
+        required: false
+    environment:
+      CORRIDOR_HOST: ${CORRIDOR_HOST}
+      # Every address Keycloak writes, the tokens' issuer included, is the gateway's public one.
+      KC_HOSTNAME: https://${CORRIDOR_HOST}:8443
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://pgsql:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+    volumes:
+      - ./gateway/realm:/opt/keycloak/data/import:ro
+    # Ready once the realm answers: Keycloak's /health/ready says UP while it still imports the realm, and answers 503
+    # to every other request until it is done.
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /realms/corridor/.well-known/openid-configuration HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s

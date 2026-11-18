@@ -1,0 +1,511 @@
+# The corridor's gateway: the only container of the package that publishes ports.
+#
+#   8095  Operational Display      browser   login, role corridor-operator, long-living session
+#   8000  Face Matcher UI          browser   login, role face-matcher-admin
+#   8090  Corridor Hub API         systems   bearer token, role corridor-integrator; /corridor-hub/admin/ corridor-admin
+#   8098  Face Matcher REST API    systems   bearer token, role corridor-integrator or corridor-admin
+#   8097  Face Matcher GraphQL API systems   bearer token, role corridor-integrator or corridor-admin
+#   8443  Keycloak                 everyone  the login pages and the token endpoint only, no administration
+#   8883  MQTT over TLS            cameras   passed on to the broker, which checks its own credentials
+#
+# Everything is HTTPS: the login's cookies are always `Secure`, so over plain HTTP no browser on another machine
+# could ever finish a sign-in. A browser port runs three filters in a row: oauth2 (the login and the session),
+# jwt_authn (is the token genuine: signature, issuer, audience, expiry) and rbac (does it carry the role). An API
+# port runs the last two only: a call without a token gets 401 and never a redirect to an HTML page.
+#
+# Everything behind a listener is denied unless a role allows it; nothing here is public except Keycloak's own
+# login pages. The services behind get neither the session cookies nor the token, only the header
+# `x-corridor-user`, which this gateway writes and a client cannot.
+#
+# ${CORRIDOR_HOST} is filled in by start-gateway.sh when the container starts. Three addresses of the login are
+# fixed at that moment and cannot follow the name a browser typed, so the corridor answers under that one name.
+#
+# Checked with `envoy --mode validate` on the pinned image, and by the gateway cases of smart-corridor-e2e-suite.
+
+node:
+  id: corridor-gateway
+  cluster: smart-corridor
+
+overload_manager:
+  resource_monitors:
+    - name: envoy.resource_monitors.global_downstream_max_connections
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+        max_active_downstream_connections: 10000
+
+static_resources:
+  listeners:
+    # ------------------------------------------------------------------------------------ Operational Display
+    - name: display
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8095 }
+      filter_chains:
+        - transport_socket: &tls
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                # HTTP/1.1 only, so that a WebSocket upgrades the plain way (the Display's live data and video).
+                alpn_protocols: ["http/1.1"]
+                tls_params: { tls_minimum_protocol_version: TLSv1_2 }
+                tls_certificates:
+                  - certificate_chain: { filename: /etc/envoy-tls/server.crt }
+                    private_key: { filename: /etc/envoy-tls/server.key }
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: display
+                codec_type: AUTO
+                # Envoy writes x-forwarded-for and x-forwarded-proto itself; what a client sent is not trusted.
+                use_remote_address: true
+                upgrade_configs: &upgrades
+                  - upgrade_type: websocket
+                # Who asked for what, with the signed-in user's name: the only record of it in the corridor.
+                access_log: &access_log
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                      log_format:
+                        text_format_source:
+                          inline_string: "%START_TIME% port=%DOWNSTREAM_LOCAL_PORT% client=%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT% user=%DYNAMIC_METADATA(envoy.filters.http.jwt_authn:jwt:preferred_username)% %REQ(:METHOD)% %REQ(:PATH):256% -> %RESPONSE_CODE% %RESPONSE_CODE_DETAILS%\n"
+                route_config:
+                  name: display
+                  virtual_hosts:
+                    - name: display
+                      domains: ["*"]
+                      # The services behind build their own address from these: Spring, for one, resets the port when only
+                      # X-Forwarded-Proto is given, and its WebSocket handshake then refuses the browser's origin. The port
+                      # is the one the client connected to; a forwarded host from a client is never passed on.
+                      request_headers_to_add: &forwarded_port
+                        - header: { key: x-forwarded-port, value: "%DOWNSTREAM_LOCAL_PORT%" }
+                          append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                      request_headers_to_remove: &no_forwarded_host [x-forwarded-host]
+                      routes:
+                        - match: { prefix: "/" }
+                          # no time limit: the live data and the camera preview are long-lived streams
+                          route: { cluster: display, timeout: 0s }
+                          request_headers_to_remove: &credentials_stay_here [cookie, authorization]
+                http_filters:
+                  - name: envoy.filters.http.oauth2
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+                      config:
+                        # where the browser is sent: Keycloak's public address, on this gateway's port 8443
+                        authorization_endpoint: https://${CORRIDOR_HOST}:8443/realms/corridor/protocol/openid-connect/auth
+                        end_session_endpoint: https://${CORRIDOR_HOST}:8443/realms/corridor/protocol/openid-connect/logout
+                        # what Envoy calls itself: inside the corridor's network
+                        token_endpoint:
+                          cluster: keycloak
+                          uri: http://sceg-keycloak:8080/realms/corridor/protocol/openid-connect/token
+                          timeout: 10s
+                        redirect_uri: "https://%REQ(:authority)%/oauth2/callback"
+                        redirect_path_matcher:
+                          path: { exact: /oauth2/callback }
+                        signout_path:
+                          path: { exact: /oauth2/signout }
+                        # offline_access makes the Display's session long-living: it does not end with Keycloak's
+                        # ordinary session limits, only when it is unused for the realm's offline idle time or
+                        # revoked in Keycloak. Only this client may ask for it.
+                        auth_scopes: ["openid", "offline_access"]
+                        auth_type: BASIC_AUTH
+                        credentials:
+                          client_id: corridor-display
+                          token_secret:
+                            name: display-client-secret
+                            sds_config:
+                              path_config_source: { path: /etc/envoy-secrets/display-client-secret.yaml }
+                          hmac_secret:
+                            name: hmac-secret
+                            sds_config:
+                              path_config_source: { path: /etc/envoy-secrets/hmac-secret.yaml }
+                          # Names of its own: cookies belong to a host, not to a port, and the Display's long
+                          # session must not mix with an administrator's on another port of the same host.
+                          cookie_names:
+                            bearer_token: DisplayBearerToken
+                            oauth_hmac: DisplayOauthHMAC
+                            oauth_expires: DisplayOauthExpires
+                            id_token: DisplayIdToken
+                            refresh_token: DisplayRefreshToken
+                            oauth_nonce: DisplayOauthNonce
+                            code_verifier: DisplayCodeVerifier
+                        forward_bearer_token: true
+                        use_refresh_token: true
+                        # an offline token carries no expiry of its own; without this the cookie would last a week
+                        default_refresh_token_expires_in: 2592000s
+                        # A data call without a live session gets 401, not a login page: a fetch would follow the
+                        # redirect and take Keycloak's HTML for data. The renewal is still tried first.
+                        deny_redirect_matcher:
+                          - { name: ":path", string_match: { prefix: "/graphql-proxy" } }
+                          - { name: ":path", string_match: { prefix: "/graphql-ws" } }
+                          - { name: ":path", string_match: { prefix: "/corridor-hub/" } }
+                          - { name: ":path", string_match: { prefix: "/smartface-gql" } }
+                          - { name: ":path", string_match: { prefix: "/smartface-api/" } }
+                          - { name: ":path", string_match: { prefix: "/smartface-video/" } }
+                        cookie_configs: &cookie_configs
+                          bearer_token_cookie_config: { same_site: LAX }
+                          oauth_hmac_cookie_config: { same_site: LAX }
+                          oauth_expires_cookie_config: { same_site: LAX }
+                          id_token_cookie_config: { same_site: LAX }
+                          refresh_token_cookie_config: { same_site: LAX }
+                          oauth_nonce_cookie_config: { same_site: LAX }
+                          code_verifier_cookie_config: { same_site: LAX }
+                  - &jwt_filter
+                    name: envoy.filters.http.jwt_authn
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                      providers:
+                        keycloak:
+                          issuer: https://${CORRIDOR_HOST}:8443/realms/corridor
+                          audiences: ["corridor-gateway"]
+                          remote_jwks:
+                            http_uri:
+                              uri: http://sceg-keycloak:8080/realms/corridor/protocol/openid-connect/certs
+                              cluster: keycloak
+                              timeout: 5s
+                            cache_duration: 300s
+                            # the gateway starts without waiting for Keycloak and fetches the keys when it is up
+                            async_fetch: { fast_listener: true }
+                          # the token is checked here and goes no further
+                          forward: false
+                          payload_in_metadata: jwt
+                          claim_to_headers:
+                            - header_name: x-corridor-user
+                              claim_name: preferred_username
+                      rules:
+                        - match: { prefix: "/" }
+                          requires: { provider_name: keycloak }
+                  - name: envoy.filters.http.rbac
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+                      rules:
+                        action: ALLOW
+                        policies:
+                          operators:
+                            permissions: [{ any: true }]
+                            principals:
+                              - &role_operator
+                                sourced_metadata:
+                                  metadata_source: DYNAMIC
+                                  metadata_matcher:
+                                    filter: envoy.filters.http.jwt_authn
+                                    path: [{ key: jwt }, { key: realm_access }, { key: roles }]
+                                    value: { list_match: { one_of: { string_match: { exact: corridor-operator } } } }
+                  - &router
+                    name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+    # ------------------------------------------------------------------------------------ Face Matcher UI
+    - name: face-matcher-ui
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8000 }
+      filter_chains:
+        - transport_socket: *tls
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: face_matcher_ui
+                codec_type: AUTO
+                use_remote_address: true
+                upgrade_configs: *upgrades
+                access_log: *access_log
+                route_config:
+                  name: face-matcher-ui
+                  virtual_hosts:
+                    - name: face-matcher-ui
+                      domains: ["*"]
+                      request_headers_to_add: *forwarded_port
+                      request_headers_to_remove: *no_forwarded_host
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: face_matcher_ui, timeout: 0s }
+                          request_headers_to_remove: *credentials_stay_here
+                http_filters:
+                  - name: envoy.filters.http.oauth2
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+                      config:
+                        authorization_endpoint: https://${CORRIDOR_HOST}:8443/realms/corridor/protocol/openid-connect/auth
+                        end_session_endpoint: https://${CORRIDOR_HOST}:8443/realms/corridor/protocol/openid-connect/logout
+                        token_endpoint:
+                          cluster: keycloak
+                          uri: http://sceg-keycloak:8080/realms/corridor/protocol/openid-connect/token
+                          timeout: 10s
+                        redirect_uri: "https://%REQ(:authority)%/oauth2/callback"
+                        redirect_path_matcher:
+                          path: { exact: /oauth2/callback }
+                        signout_path:
+                          path: { exact: /oauth2/signout }
+                        auth_scopes: ["openid"]
+                        auth_type: BASIC_AUTH
+                        credentials:
+                          client_id: corridor-gateway
+                          token_secret:
+                            name: gateway-client-secret
+                            sds_config:
+                              path_config_source: { path: /etc/envoy-secrets/gateway-client-secret.yaml }
+                          hmac_secret:
+                            name: hmac-secret
+                            sds_config:
+                              path_config_source: { path: /etc/envoy-secrets/hmac-secret.yaml }
+                        forward_bearer_token: true
+                        use_refresh_token: true
+                        # the UI's own server routes: data, images, video
+                        deny_redirect_matcher:
+                          - { name: ":path", string_match: { prefix: "/-/" } }
+                        cookie_configs: *cookie_configs
+                  - *jwt_filter
+                  - name: envoy.filters.http.rbac
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+                      rules:
+                        action: ALLOW
+                        policies:
+                          face-matcher-admins:
+                            permissions: [{ any: true }]
+                            principals:
+                              - sourced_metadata:
+                                  metadata_source: DYNAMIC
+                                  metadata_matcher:
+                                    filter: envoy.filters.http.jwt_authn
+                                    path: [{ key: jwt }, { key: realm_access }, { key: roles }]
+                                    value: { list_match: { one_of: { string_match: { exact: face-matcher-admin } } } }
+                  - *router
+
+    # ------------------------------------------------------------------------------------ Corridor Hub API
+    - name: hub
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8090 }
+      filter_chains:
+        - transport_socket: *tls
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: hub
+                codec_type: AUTO
+                use_remote_address: true
+                upgrade_configs: *upgrades
+                access_log: *access_log
+                route_config:
+                  name: hub
+                  virtual_hosts:
+                    - name: hub
+                      domains: ["*"]
+                      request_headers_to_add: *forwarded_port
+                      request_headers_to_remove: *no_forwarded_host
+                      routes:
+                        # The Hub's write surface: the administrator's role, not the integrator's.
+                        - match: { prefix: "/corridor-hub/admin/" }
+                          route: { cluster: hub, timeout: 0s }
+                          request_headers_to_remove: *credentials_stay_here
+                          typed_per_filter_config:
+                            envoy.filters.http.rbac:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+                              rbac:
+                                rules:
+                                  action: ALLOW
+                                  policies:
+                                    administrators:
+                                      permissions: [{ any: true }]
+                                      principals:
+                                        - &role_admin
+                                          sourced_metadata:
+                                            metadata_source: DYNAMIC
+                                            metadata_matcher:
+                                              filter: envoy.filters.http.jwt_authn
+                                              path: [{ key: jwt }, { key: realm_access }, { key: roles }]
+                                              value: { list_match: { one_of: { string_match: { exact: corridor-admin } } } }
+                        - match: { prefix: "/" }
+                          route: { cluster: hub, timeout: 0s }
+                          request_headers_to_remove: *credentials_stay_here
+                http_filters: &api_filters
+                  - *jwt_filter
+                  - name: envoy.filters.http.rbac
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+                      rules:
+                        action: ALLOW
+                        policies:
+                          integrators-and-administrators:
+                            permissions: [{ any: true }]
+                            principals:
+                              - sourced_metadata:
+                                  metadata_source: DYNAMIC
+                                  metadata_matcher:
+                                    filter: envoy.filters.http.jwt_authn
+                                    path: [{ key: jwt }, { key: realm_access }, { key: roles }]
+                                    value: { list_match: { one_of: { string_match: { exact: corridor-integrator } } } }
+                              - *role_admin
+                  - *router
+
+    # ------------------------------------------------------------------------------------ Face Matcher REST API
+    - name: rest-api
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8098 }
+      filter_chains:
+        - transport_socket: *tls
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: rest_api
+                codec_type: AUTO
+                use_remote_address: true
+                upgrade_configs: *upgrades
+                access_log: *access_log
+                route_config:
+                  name: rest-api
+                  virtual_hosts:
+                    - name: rest-api
+                      domains: ["*"]
+                      request_headers_to_add: *forwarded_port
+                      request_headers_to_remove: *no_forwarded_host
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: rest_api, timeout: 0s }
+                          request_headers_to_remove: *credentials_stay_here
+                http_filters: *api_filters
+
+    # ------------------------------------------------------------------------------------ Face Matcher GraphQL API
+    - name: graphql-api
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8097 }
+      filter_chains:
+        - transport_socket: *tls
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: graphql_api
+                codec_type: AUTO
+                use_remote_address: true
+                upgrade_configs: *upgrades
+                access_log: *access_log
+                route_config:
+                  name: graphql-api
+                  virtual_hosts:
+                    - name: graphql-api
+                      domains: ["*"]
+                      request_headers_to_add: *forwarded_port
+                      request_headers_to_remove: *no_forwarded_host
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: graphql_api, timeout: 0s }
+                          request_headers_to_remove: *credentials_stay_here
+                http_filters: *api_filters
+
+    # ------------------------------------------------------------------------------------ Keycloak
+    # The login pages, their own style files and the token endpoint. Never behind the login: these are the login.
+    # The administration console and its API are not routed: the console is on the host's loopback only.
+    - name: keycloak
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8443 }
+      filter_chains:
+        - transport_socket: *tls
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: keycloak
+                codec_type: AUTO
+                use_remote_address: true
+                access_log: *access_log
+                route_config:
+                  name: keycloak
+                  virtual_hosts:
+                    - name: keycloak
+                      domains: ["*"]
+                      request_headers_to_add: *forwarded_port
+                      request_headers_to_remove: *no_forwarded_host
+                      routes:
+                        - match: { prefix: "/realms/corridor/" }
+                          route: { cluster: keycloak, timeout: 15s }
+                        - match: { prefix: "/resources/" }
+                          route: { cluster: keycloak, timeout: 15s }
+                        - match: { prefix: "/" }
+                          direct_response: { status: 404 }
+                http_filters:
+                  - *router
+
+    # ------------------------------------------------------------------------------------ MQTT over TLS
+    # For cameras that publish to the broker (the MCT feed). TLS ends here; the broker checks the credentials.
+    - name: mqtt
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 8883 }
+      filter_chains:
+        - transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                tls_params: { tls_minimum_protocol_version: TLSv1_2 }
+                tls_certificates:
+                  - certificate_chain: { filename: /etc/envoy-tls/server.crt }
+                    private_key: { filename: /etc/envoy-tls/server.key }
+          filters:
+            - name: envoy.filters.network.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                stat_prefix: mqtt
+                cluster: mqtt
+
+  clusters:
+    - name: keycloak
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: keycloak
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: sceg-keycloak, port_value: 8080 } } }
+    - name: display
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: display
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: sceg-frontend, port_value: 8080 } } }
+    - name: face_matcher_ui
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: face_matcher_ui
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: face-matcher-ui, port_value: 8000 } } }
+    - name: hub
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: hub
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: sceg-hub, port_value: 8090 } } }
+    - name: rest_api
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: rest_api
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: api, port_value: 8080 } } }
+    - name: graphql_api
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: graphql_api
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: graphql-api, port_value: 8080 } } }
+    - name: mqtt
+      type: STRICT_DNS
+      connect_timeout: 5s
+      load_assignment:
+        cluster_name: mqtt
+        endpoints:
+          - lb_endpoints:
+              - endpoint: { address: { socket_address: { address: rmq, port_value: 1883 } } }

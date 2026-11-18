@@ -3,6 +3,9 @@
 secrets/*.lic
 face-matcher/secrets/*.lic
 face-matcher/iengine.lic
+# The gateway's secrets and certificate, written by start.sh (or the site's own certificate)
+secrets/gateway/
+secrets/tls/
 
 # Local-only tooling (internal registry migration scripts etc.) — never commit
 .local/

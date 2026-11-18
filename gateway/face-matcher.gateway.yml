@@ -1,0 +1,21 @@
+# Added to face-matcher/'s compose files by start.sh when the gateway is on: the platform's services publish no
+# port; the gateway reaches them on face-matcher-network.
+services:
+  face-matcher-ui:
+    ports: !reset []
+  api:
+    ports: !reset []
+  graphql-api:
+    ports: !reset []
+  db-synchronization-leader:
+    ports: !reset []
+  cam-1:
+    ports: !reset []
+  cam-2:
+    ports: !reset []
+  cam-3:
+    ports: !reset []
+  cam-4:
+    ports: !reset []
+  cam-5:
+    ports: !reset []
