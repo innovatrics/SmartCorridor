@@ -1,6 +1,6 @@
 # secrets/
 
-Put `iengine.lic` here. It is git-ignored. The license must contain the `smart_corridor` block. `start.sh` links it into `face-matcher/secrets/`.
+Put `iengine.lic` here. It is git-ignored. The license must contain the `smart_corridor` block. `start.sh` links it into `facematcher/secrets/`.
 
 With the gateway on, `start.sh` also writes, once, and keeps afterwards:
 

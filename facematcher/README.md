@@ -1,24 +1,24 @@
-# Face Matcher
+# FaceMatcher
 
 > [!CAUTION]
 > **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.**
 > Has no Auth by default. For prod turn on auth: see [Turning the login on](#turning-the-login-on) and the [documentation](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/face-matcher/).
 
-Face Matcher is a real-time face identification server. It processes video streams, matches faces against watchlists and publishes the results over REST, GraphQL and RabbitMQ. Face Matcher UI is the web UI for watchlists, cameras, live previews and 1:N search.
+FaceMatcher is a real-time face identification server. It processes video streams, matches faces against watchlists and publishes the results over REST, GraphQL and RabbitMQ. FaceMatcher UI is the web UI for watchlists, cameras, live previews and 1:N search.
 
 # Deployment
 
 1. Install `Docker` and `docker compose` on the host machine.
-2. Login to container registry `docker login registry.dot.innovatrics.com -u <username> -p <password>`. The credentials are available in our [Customer Portal](https://customerportal.innovatrics.com/). The images are not public. Your account needs the right to pull from two projects of the registry: `vpp/` (the platform) and `border-control/` (Face Matcher UI). If a pull is refused with `unauthorized`, your account lacks that right; ask your Innovatrics contact for it.
+2. Login to container registry `docker login registry.dot.innovatrics.com -u <username> -p <password>`. The credentials are available in our [Customer Portal](https://customerportal.innovatrics.com/). The images are not public. Your account needs the right to pull from two projects of the registry: `vpp/` (the platform) and `border-control/` (FaceMatcher UI). If a pull is refused with `unauthorized`, your account lacks that right; ask your Innovatrics contact for it.
 3. Identify hardware id (hwid) for your machine with command `docker run --rm registry.dot.innovatrics.com/vpp/license-manager:3.2.7`.
 4. The registry holds the images only, never a license. The license is separate: buy it, or ask your Innovatrics sales representative for a trial; generate `iengine.lic` for this machine's hardware id in the [Customer Portal](https://customerportal.innovatrics.com/) and copy it to `secrets/`.
 5. Run `run.sh`.
 
-Face Matcher UI is at http://localhost:8000. It opens without login.
+FaceMatcher UI is at http://localhost:8000. It opens without login.
 
 ## Scripts
 
-- `run.sh` - starts dependencies, migrates the database, starts the platform services and Face Matcher UI
+- `run.sh` - starts dependencies, migrates the database, starts the platform services and FaceMatcher UI
 - `stop.sh` - stops everything, keeps data
 - `factory-reset.sh` - stops everything and deletes containers, images and volumes
 
@@ -26,7 +26,7 @@ Face Matcher UI is at http://localhost:8000. It opens without login.
 
 | Service         | URL                           | Credentials                |
 | --------------- | ----------------------------- | -------------------------- |
-| Face Matcher UI | http://localhost:8000         |                            |
+| FaceMatcher UI | http://localhost:8000         |                            |
 | REST API        | http://localhost:8098         |                            |
 | GraphQL API     | http://localhost:8097/graphql |                            |
 | RabbitMQ        | http://localhost:15672        | guest / guest              |
@@ -35,26 +35,26 @@ Face Matcher UI is at http://localhost:8000. It opens without login.
 
 Ports are published on all interfaces with default credentials. Do not expose the host to an untrusted network.
 
-Face Matcher UI asks nobody to sign in, and the REST and GraphQL APIs run without authentication: whoever reaches these ports has full access. With the login off, the UI sends the APIs no credential.
+FaceMatcher UI asks nobody to sign in, and the REST and GraphQL APIs run without authentication: whoever reaches these ports has full access. With the login off, the UI sends the APIs no credential.
 
 ## Configuration
 
-- `.env` - all settings, documented inline. Section 4 is Face Matcher UI: registry, image version, port, `FACE_MATCHER_UI_IDENTIFICATION`.
-- `.env.face-matcher-ui` - Face Matcher UI settings. The login block is first.
-- `branding/face-matcher-ui/` - Face Matcher UI logo, favicon and naming
+- `.env` - all settings, documented inline. Section 4 is FaceMatcher UI: registry, image version, port, `FACE_MATCHER_UI_IDENTIFICATION`.
+- `.env.face-matcher-ui` - FaceMatcher UI settings. The login block is first.
+- `branding/face-matcher-ui/` - FaceMatcher UI logo, favicon and naming
 - `docker-compose.yml`, `dependencies/docker-compose.yml`, `run.sh` - the Innovatrics video processing platform release package (`video_processing_deployment.zip`)
-- `docker-compose.override.yml` - Face Matcher UI, the restart policy and `user: root`, see the comment inside
+- `docker-compose.override.yml` - FaceMatcher UI, the restart policy and `user: root`, see the comment inside
 - `secrets/` - git-ignored. The license; with the login on also the client secret, the TLS key and certificate.
 
 After a change in `.env.face-matcher-ui`, `docker compose up -d face-matcher-ui` recreates the UI only.
 
-Not deployed: offline video processing, grouping, Milvus, Access Controller. The palm services run; Face Matcher UI keeps its palm screens off (`PALMS_ENABLED=false` in `.env.face-matcher-ui`).
+Not deployed: offline video processing, grouping, Milvus, Access Controller. The palm services run; FaceMatcher UI keeps its palm screens off (`PALMS_ENABLED=false` in `.env.face-matcher-ui`).
 
 ## Turning the login on
 
-This section is for a standalone Face Matcher. In a Smart Corridor, Face Matcher UI's own login stays off: the corridor's gateway signs users in, in front of all its services; see the Smart Corridor README, "The gateway".
+This section is for a standalone FaceMatcher. In a SmartCorridor, FaceMatcher UI's own login stays off: the corridor's gateway signs users in, in front of all its services; see the SmartCorridor README, "The gateway".
 
-Face Matcher UI signs its users in through Keycloak (OpenID Connect). It has no other login. The official documentation: [Face Matcher](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/face-matcher/).
+FaceMatcher UI signs its users in through Keycloak (OpenID Connect). It has no other login. The official documentation: [FaceMatcher](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/face-matcher/).
 
 ### As shipped: the login and HTTPS off
 
@@ -67,11 +67,11 @@ HTTPS_ENABLED=false
 
 For evaluation, demos and experiments on a trusted network only. The UI is served over plain HTTP and asks nobody to sign in: whoever reaches port 8000 has full access to the members' photos, the results and the live video, and can change cameras and watchlists. The UI says so in its log at every start.
 
-Face Matcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_ENABLED=false` is what lets it run without login; without that line it does not start until its Keycloak settings are set. Only `true` and `false` are accepted; any other value stops the start.
+FaceMatcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_ENABLED=false` is what lets it run without login; without that line it does not start until its Keycloak settings are set. Only `true` and `false` are accepted; any other value stops the start.
 
 ### Production: the Keycloak login on, over HTTPS
 
-`<host>` is the host name the operators type to open Face Matcher UI.
+`<host>` is the host name the operators type to open FaceMatcher UI.
 
 1. What you bring:
    - A Keycloak, version 17 or newer (tested with 26.8.1), that the operators' browsers and this host both reach at the same `https://` address.
@@ -104,7 +104,7 @@ Face Matcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_E
 
    The UI runs as uid 1000 and must be able to read `secrets/tls` and the files in it; `sudo chown -R 1000 secrets/tls` gives them to that user. A key it cannot read stops the start.
 5. In `docker-compose.override.yml`, at `face-matcher-ui`, uncomment the two lines `- ./secrets/face-matcher-ui.env` and `- ./secrets/tls:/certs:ro`.
-6. Run `run.sh`. When Face Matcher is running already, `docker compose up -d face-matcher-ui` is enough. If the UI does not come up, `docker logs face-matcher-ui` names the reason.
+6. Run `run.sh`. When FaceMatcher is running already, `docker compose up -d face-matcher-ui` is enough. If the UI does not come up, `docker logs face-matcher-ui` names the reason.
 7. Check at `https://<host>:8000` (`run.sh` still prints the `http://` address):
    - The Keycloak login appears, and a user with the role gets in.
    - A user without the role gets "No access".
@@ -119,7 +119,7 @@ Face Matcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_E
 
 ### What stays open with the login on
 
-- The login protects Face Matcher UI only. The REST and GraphQL APIs on ports 8098 and 8097 have no authentication, so whoever reaches them goes around the login. A standalone Face Matcher may turn their authentication on, never a Smart Corridor: in `.env`, section 3.3, `Authentication__UseAuthentication=true`, `Authentication__Authority=<KEYCLOAK_DOMAIN>/realms/<KEYCLOAK_REALM>` and `Authentication__Audience=face-matcher`; in Keycloak, an Audience mapper on the UI's client that adds `face-matcher` to its access tokens. The UI then calls the APIs with the token of the signed-in user. With a Keycloak certificate from a private authority, the APIs have to trust it as well, otherwise they refuse every token (HTTP 401): with the authority's certificate in `secrets/tls/ca.crt`, uncomment the `environment` and `volumes` lines at `api` and at `graphql-api` in `docker-compose.override.yml`.
+- The login protects FaceMatcher UI only. The REST and GraphQL APIs on ports 8098 and 8097 have no authentication, so whoever reaches them goes around the login. A standalone FaceMatcher may turn their authentication on, never a SmartCorridor: in `.env`, section 3.3, `Authentication__UseAuthentication=true`, `Authentication__Authority=<KEYCLOAK_DOMAIN>/realms/<KEYCLOAK_REALM>` and `Authentication__Audience=face-matcher`; in Keycloak, an Audience mapper on the UI's client that adds `face-matcher` to its access tokens. The UI then calls the APIs with the token of the signed-in user. With a Keycloak certificate from a private authority, the APIs have to trust it as well, otherwise they refuse every token (HTTP 401): with the authority's certificate in `secrets/tls/ca.crt`, uncomment the `environment` and `volumes` lines at `api` and at `graphql-api` in `docker-compose.override.yml`.
 - With `VIDEO_WITHOUT_LOGIN=true` the live camera video is readable without login.
 - Between the UI and the APIs the traffic, the user's token included, is plain HTTP on the compose network.
 - RabbitMQ, the S3 storage, PostgreSQL and pgAdmin stay published on all interfaces with default credentials. Change the credentials and restrict the ports.
@@ -145,7 +145,7 @@ A site with the login on: a new version of this package brings `.env.face-matche
 
 ## Upgrading from v1.0.0
 
-v1.0.0 ran SmartFace Station. This version runs Face Matcher UI 2.1.1 in its place, on the same port. The old names are gone, without aliases:
+v1.0.0 ran Station, the former web UI. This version runs FaceMatcher UI 2.1.1 in its place, on the same port. The old names are gone, without aliases:
 
 | v1.0.0                                                      | Now                                                                                  |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -157,7 +157,7 @@ v1.0.0 ran SmartFace Station. This version runs Face Matcher UI 2.1.1 in its pla
 | `STATION_PUBLIC_HOST`, `S3_PUBLIC_ENDPOINT`                 | removed: the UI serves the members' photos itself                                    |
 
 1. Before stopping anything, try `docker pull registry.dot.innovatrics.com/border-control/face-matcher-ui:2.1.1`. If it is refused with `unauthorized`, your registry account lacks the right to pull from `border-control/`; ask your Innovatrics contact for it first.
-2. Carry your own values from `.env.station` over into `.env.face-matcher-ui`: `BLACKLIST_WATCHLIST_IDS`, the `WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n` labels, `CAM_PREVIEW_HOST_*`, `SCORE_CONVERSION_*`. Leave Station's `S3_*`, `AUTH0_*`, `KEYCLOAK_*` and `ROLE_KEY_*` lines behind: Face Matcher UI does not read them, and its Keycloak login is set up as described in [Turning the login on](#turning-the-login-on).
+2. Carry your own values from `.env.station` over into `.env.face-matcher-ui`: `BLACKLIST_WATCHLIST_IDS`, the `WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n` labels, `CAM_PREVIEW_HOST_*`, `SCORE_CONVERSION_*`. Leave Station's `S3_*`, `AUTH0_*`, `KEYCLOAK_*` and `ROLE_KEY_*` lines behind: FaceMatcher UI does not read them, and its Keycloak login is set up as described in [Turning the login on](#turning-the-login-on).
 3. Carry your own logos over into `branding/face-matcher-ui/`. Of `naming-product.json` the UI reads `windowTitle` and `configSection`.
 4. Change what you built on the old names: `fm-station:8000` is now `face-matcher-ui:8000`, and `run.sh` reads `FACE_MATCHER_UI_IDENTIFICATION` in place of `STATION_IDENTIFICATION`.
 5. Run `run.sh`. It removes the `fm-station` container.
@@ -192,7 +192,7 @@ If the release notes say the watchlist update-log stream needs regenerating, exe
 
 ## Integration
 
-A stack built on Face Matcher may rely on the following. Everything else is internal.
+A stack built on FaceMatcher may rely on the following. Everything else is internal.
 
 | Network         | `face-matcher-network`, created by `run.sh`. Join it with `external: true`.                          |
 | --------------- | --------------------------------------------------------------------------------------------------- |
@@ -201,13 +201,13 @@ A stack built on Face Matcher may rely on the following. Everything else is inte
 | RabbitMQ        | `rmq:5672` AMQP, `rmq:1883` MQTT, `rmq:5552` streams                                                |
 | S3              | `seaweedfs:8333`. Use your own bucket.                                                               |
 | PostgreSQL      | `pgsql:5432`                                                                                        |
-| Face Matcher UI | `face-matcher-ui:8000`                                                                              |
+| FaceMatcher UI | `face-matcher-ui:8000`                                                                              |
 | Admin image     | `${REGISTRY}admin:${VERSION}` from `.env`                                                            |
-| Start order     | Face Matcher first. `run.sh` reads `FACE_MATCHER_UI_IDENTIFICATION` from the environment.            |
+| Start order     | FaceMatcher first. `run.sh` reads `FACE_MATCHER_UI_IDENTIFICATION` from the environment.            |
 | Ports           | A stack with its own entry point may run `run.sh` with `DEPENDENCIES_BIND_ADDRESS=127.0.0.1`: PostgreSQL, pgAdmin, RabbitMQ and S3 are then published on the host's loopback only. |
 
 Credentials are in `.env`.
 
 ## Production use
 
-This deployment demonstrates the configuration needed to wire everything up. Turn the login of Face Matcher UI on, change the credentials and restrict the published ports before production use.
+This deployment demonstrates the configuration needed to wire everything up. Turn the login of FaceMatcher UI on, change the credentials and restrict the published ports before production use.

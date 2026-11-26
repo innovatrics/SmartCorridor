@@ -7,7 +7,7 @@
 #   gateway/users.sh list
 #   gateway/users.sh revoke <name>                ends every session of <name>, the Display's long one included
 #
-# Roles: corridor-operator (the Operational Display, 8095), face-matcher-admin (Face Matcher UI, 8000),
+# Roles: corridor-operator (the Operational Display, 8095), face-matcher-admin (FaceMatcher UI, 8000),
 # corridor-admin (the Hub's /corridor-hub/admin/ and the APIs), corridor-integrator (the APIs: 8090, 8098, 8097).
 set -euo pipefail
 

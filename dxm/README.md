@@ -3,12 +3,12 @@
 Optional. Connects the corridor to a Traveler Identity Service (TIS) that runs elsewhere:
 
 ```
-TIS ──travelers, journeys, portraits──▶ DSS ──watchlists, members──▶ Face Matcher
+TIS ──travelers, journeys, portraits──▶ DSS ──watchlists, members──▶ FaceMatcher
  ▲                                                                      │ cameras
  └── Encounter (one per corridor visit) ◀── CEA ◀── cea.export ◀── Hub ◀── CIGS
 ```
 
-- **DSS** (corridor-data-synchronization-service) puts the travelers of upcoming journeys into Face Matcher watchlists `dxm.r1.flight.<flight>.<yyyyMMddHHmm>`. Only ENROLLED travelers with a portrait are synced.
+- **DSS** (corridor-data-synchronization-service) puts the travelers of upcoming journeys into FaceMatcher watchlists `dxm.r1.flight.<flight>.<yyyyMMddHHmm>`. Only ENROLLED travelers with a portrait are synced.
 - **CEA** (corridor-event-aggregation-service) collects the Hub's identifications of those travelers into visits and delivers each visit to TIS as an Encounter, `CEA_PASSAGE_QUIET` after the last match. Travelers TIS merged or rejected are parked.
 
 | Service | Version | Port (loopback) |
@@ -25,7 +25,7 @@ DSS and CEA are amd64-only. On Apple Silicon turn on Docker Desktop → "Use Ros
 - TIS reachable from this host, its token endpoint included, without an interactive login in front of it (TIS checks its own OAuth tokens).
 - Two TIS clients with the client-credentials grant: one for the DSS, one for CEA.
 - TIS 0.34.0 or later. The DSS reads portraits through TIS's API (`TIS_OBJECT_DOWNLOAD=content` in `dxm/dss.env`, `GET /api/v1/stored-objects/{id}/content`) with its own token, so TIS's object store need not be reachable from here. An older TIS has no such endpoint: every portrait fails and no one is synced.
-- Test data only: the DSS copies every synced traveler's portrait and name into this Face Matcher.
+- Test data only: the DSS copies every synced traveler's portrait and name into this FaceMatcher.
 
 ## Configuration
 
@@ -68,10 +68,10 @@ Ready when both answer 200:
 - `curl http://127.0.0.1:8660/corridor-data-synchronization-service/actuator/health/readiness`
 - `curl http://127.0.0.1:8670/corridor-event-aggregation-service/ready`
 
-`stop.sh` and `factory-reset.sh` stop DSS and CEA too. `factory-reset.sh` deletes CEA's database and the DSS's members with Face Matcher's volumes; run `setup.sh` again afterwards (it keeps `cea-local.env`).
+`stop.sh` and `factory-reset.sh` stop DSS and CEA too. `factory-reset.sh` deletes CEA's database and the DSS's members with FaceMatcher's volumes; run `setup.sh` again afterwards (it keeps `cea-local.env`).
 
 ## Checking
 
-- **TIS → corridor.** `curl -s http://127.0.0.1:8660/corridor-data-synchronization-service/status`: route r1's `lastSync.outcome` is `succeeded`, `tisReachable` and `vppReachable` are true, and Face Matcher UI shows the `dxm.r1.flight.…` watchlists.
+- **TIS → corridor.** `curl -s http://127.0.0.1:8660/corridor-data-synchronization-service/status`: route r1's `lastSync.outcome` is `succeeded`, `tisReachable` and `vppReachable` are true, and FaceMatcher UI shows the `dxm.r1.flight.…` watchlists.
 - **Corridor → TIS.** A synced traveler passes a camera: the display shows the identification, `curl -s http://127.0.0.1:8090/corridor-hub/actuator/prometheus | grep hub_cea_export_total` counts published and acked, `curl -s http://127.0.0.1:8670/corridor-event-aggregation-service/status` shows a visit, and `CEA_PASSAGE_QUIET` later TIS has an Encounter at location `DSS_DEPLOYMENT_ID`.
 - **Typical failures.** `tisAuthRejected`: wrong or missing client secret. `tisReachable=false`: URL or network. Route r1's `lastSync.outcome` `degraded` with `stored object content failed` in `docker logs sceg-dss`: a TIS older than 0.34.0, or the portrait is missing in TIS.

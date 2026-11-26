@@ -1,10 +1,10 @@
 # The corridor's gateway: the only container of the package that publishes ports.
 #
 #   8095  Operational Display      browser   login, role corridor-operator, long-living session
-#   8000  Face Matcher UI          browser   login, role face-matcher-admin
+#   8000  FaceMatcher UI          browser   login, role face-matcher-admin
 #   8090  Corridor Hub API         systems   bearer token, role corridor-integrator; /corridor-hub/admin/ corridor-admin
-#   8098  Face Matcher REST API    systems   bearer token, role corridor-integrator or corridor-admin
-#   8097  Face Matcher GraphQL API systems   bearer token, role corridor-integrator or corridor-admin
+#   8098  FaceMatcher REST API    systems   bearer token, role corridor-integrator or corridor-admin
+#   8097  FaceMatcher GraphQL API systems   bearer token, role corridor-integrator or corridor-admin
 #   8443  Keycloak                 everyone  the login pages and the token endpoint only, no administration
 #   8883  MQTT over TLS            cameras   passed on to the broker, which checks its own credentials
 #
@@ -196,7 +196,7 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
-    # ------------------------------------------------------------------------------------ Face Matcher UI
+    # ------------------------------------------------------------------------------------ FaceMatcher UI
     - name: face-matcher-ui
       address:
         socket_address: { address: 0.0.0.0, port_value: 8000 }
@@ -341,7 +341,7 @@ static_resources:
                               - *role_admin
                   - *router
 
-    # ------------------------------------------------------------------------------------ Face Matcher REST API
+    # ------------------------------------------------------------------------------------ FaceMatcher REST API
     - name: rest-api
       address:
         socket_address: { address: 0.0.0.0, port_value: 8098 }
@@ -369,7 +369,7 @@ static_resources:
                           request_headers_to_remove: *credentials_stay_here
                 http_filters: *api_filters
 
-    # ------------------------------------------------------------------------------------ Face Matcher GraphQL API
+    # ------------------------------------------------------------------------------------ FaceMatcher GraphQL API
     - name: graphql-api
       address:
         socket_address: { address: 0.0.0.0, port_value: 8097 }

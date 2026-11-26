@@ -1,7 +1,7 @@
 {
   "realm": "corridor",
   "enabled": true,
-  "displayName": "Smart Corridor",
+  "displayName": "SmartCorridor",
   "sslRequired": "external",
   "registrationAllowed": false,
   "resetPasswordAllowed": false,
@@ -25,7 +25,7 @@
       },
       {
         "name": "face-matcher-admin",
-        "description": "Face Matcher UI (port 8000): cameras, watchlists, members"
+        "description": "FaceMatcher UI (port 8000): cameras, watchlists, members"
       },
       {
         "name": "corridor-admin",
@@ -33,7 +33,7 @@
       },
       {
         "name": "corridor-integrator",
-        "description": "Systems: the Hub API (8090) and Face Matcher's APIs (8098, 8097)"
+        "description": "Systems: the Hub API (8090) and FaceMatcher's APIs (8098, 8097)"
       }
     ]
   },

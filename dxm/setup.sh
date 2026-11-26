@@ -3,7 +3,7 @@ set -euo pipefail
 
 # CEA's local passwords and admin token (made once, kept), then its database and broker objects on the corridor's
 # PostgreSQL and RabbitMQ. Idempotent; run with the corridor up (start.sh), again after factory-reset.sh.
-# Test1234 and guest/guest are the Face Matcher dependencies' own defaults: change them for anything beyond a demo.
+# Test1234 and guest/guest are the FaceMatcher dependencies' own defaults: change them for anything beyond a demo.
 cd "$(dirname "$0")"
 
 setting() { grep -E "^$1=" ./.env | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r$//' -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]+$//'; }

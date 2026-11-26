@@ -8,7 +8,7 @@ services:
     platform: linux/amd64
     container_name: sceg-dss
     restart: unless-stopped
-    # ONE instance, never scaled: one run coordinator owns this Face Matcher's DSS watchlists.
+    # ONE instance, never scaled: one run coordinator owns this FaceMatcher's DSS watchlists.
     mem_limit: 1g
     ports: ["127.0.0.1:${DSS_PORT}:8660"]
     env_file:

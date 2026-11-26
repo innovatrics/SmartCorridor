@@ -217,7 +217,7 @@ services:
     image: ${REGISTRY}graphql-api:${VERSION}
     <<: *common
     ports:
-      # we forward the configured ports to default SF ports
+      # we forward the configured ports to the default FaceMatcher ports
       - 8097:${Hosting__Port}
     environment:
       <<: [*common-env, *db-env, *mqtt-env, *otel-metrics-prometheus-env, *tracing-env, *auth-env]
@@ -233,7 +233,7 @@ services:
     image: ${REGISTRY}api:${VERSION}
     <<: *common
     ports:
-      # we forward the configured ports to default SF ports
+      # we forward the configured ports to the default FaceMatcher ports
       - 8098:${Hosting__Port}
     environment:
       <<: [*common-env, *db-env, *s3-env, *mqtt-env, *otel-metrics-prometheus-env, *tracing-env, *auth-env]
@@ -454,7 +454,7 @@ services:
     image: ${REGISTRY}db-synchronization-leader:${VERSION}
     <<: *common
     ports:
-      # we forward the configured ports to default SF ports
+      # we forward the configured ports to the default FaceMatcher ports
       - 8100:${Hosting__Port}
     environment:
       <<: [*common-env, *s3-env, *otel-metrics-prometheus-env, *tracing-env, *auth-env]
