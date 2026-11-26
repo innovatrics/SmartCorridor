@@ -8,14 +8,14 @@ Corridor and e-gate clearance on top of [FaceMatcher](facematcher/). The Hub tur
 | Component                     | Version           | Set in                  |
 | ----------------------------- | ----------------- | ----------------------- |
 | Corridor Hub                  | 0.13.0            | `.env` `HUB_VERSION`      |
-| Operational display           | 0.13.0            | `.env` `FRONTEND_VERSION` |
+| Operational display           | 0.13.1            | `.env` `FRONTEND_VERSION` |
 | CIGS                          | 0.5.0             | `.env` `CIGS_VERSION`     |
 | Signal controller (LED stripes) | 0.0.1           | `.env` `SIGNAL_CONTROLLER_VERSION` |
 | FaceMatcher                   | v5_4.43.0.10149   | `facematcher/.env` `VERSION` |
 | FaceMatcher UI                | 2.1.2             | `facematcher/.env` `FACE_MATCHER_UI_VERSION` |
 | DSS, CEA (optional)           | 0.4.0, 0.3.1      | `dxm/.env` (see [dxm/](dxm/README.md)) |
 
-Display 0.13.0 needs Hub 0.13.0; the fallback is 0.12.0 for both. Since Hub 0.12.0 identification comes from CIGS: with CIGS stopped or `CIGS_SOURCE_ENABLED=false` the Hub identifies no one and does not warn. Start order is CIGS, Hub, Display; compose waits for CIGS to be healthy before it starts the Hub.
+Display 0.13.x needs Hub 0.13.0 (0.13.1 fixes a flickering Full Frame in the detail); the fallback is 0.12.0 for both. Since Hub 0.12.0 identification comes from CIGS: with CIGS stopped or `CIGS_SOURCE_ENABLED=false` the Hub identifies no one and does not warn. Start order is CIGS, Hub, Display; compose waits for CIGS to be healthy before it starts the Hub.
 
 # Deployment
 
