@@ -88,6 +88,24 @@ services:
     volumes:
       - ./secrets/iengine.lic:/etc/innovatrics/iengine.lic:ro
 
+  # LED stripes on the pole (Shelly Pro RGBWW): traveller signals from the Hub's clearance decisions. Headless,
+  # no port published: its state API has no access control yet. Devices are set in .env.signal-controller;
+  # without any it runs and does nothing.
+  signal-controller:
+    image: ${REGISTRY}corridor-signal-controller:${SIGNAL_CONTROLLER_VERSION}
+    container_name: sceg-signal-controller
+    restart: unless-stopped
+    # The buildpack sizes the JVM from this limit.
+    mem_limit: 1g
+    depends_on:
+      hub:
+        condition: service_started
+        restart: true
+    env_file:
+      - ./.env.signal-controller
+    environment:
+      SIGNAL_CONTROLLER_HUB_URL: ws://sceg-hub:8090/corridor-hub/graphql
+
 volumes:
   cigs-settings:
 
