@@ -26,7 +26,7 @@ Before deploying, you will need:
 
 ## License
 
-- Identify the hardware id (hwid) of your machine with `docker run --rm registry.dot.innovatrics.com/vpp/license-manager:3.2.7`.
+- Identify the hardware id (hwid) of your machine with `docker run --rm registry.dot.innovatrics.com/border-control/vpp/license-manager:3.2.7`.
 - Obtain a license with the `smart_corridor` block for your hwid from the [Customer Portal](https://customerportal.innovatrics.com/) (bought, or a trial from your Innovatrics sales representative).
 - Copy `iengine.lic` to `secrets/`.
 
