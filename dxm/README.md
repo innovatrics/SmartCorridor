@@ -44,7 +44,7 @@ CEA_EXPORT_ENABLED=true
 CEA_EXPORT_EXCHANGE=cea.export
 ```
 
-**Document scans** (`DSS_DOCUMENT_IMAGES`, `HUB_DOCUMENT_IMAGES`) stay off: copies of travel documents are allowed on isolated nodes only.
+**Document scans** (the DSS's `DOCUMENT_IMAGES`, the Hub's `HUB_DOCUMENT_IMAGES_ENABLED`) stay off: copies of travel documents are allowed on isolated nodes only.
 
 ## Secrets
 
