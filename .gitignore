@@ -13,3 +13,7 @@ secrets/tls/
 # macOS
 .DS_Store
 __MACOSX/
+
+# DSS/CEA secrets belong in DXM_SECRETS_DIR, outside the repository (dxm/README.md)
+dxm/tis-*.env
+dxm/cea-local.env

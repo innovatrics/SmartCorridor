@@ -7,6 +7,10 @@ services:
     restart: unless-stopped
     # The buildpack sizes the JVM from this limit; without one it takes the memory free at container start.
     mem_limit: 2g
+    # Start order CIGS, Hub, Display: the Hub identifies through CIGS (Hub ≥ 0.12.0).
+    depends_on:
+      cigs:
+        condition: service_healthy
     ports:
       - "8090:8090"
     env_file:

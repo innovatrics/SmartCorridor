@@ -7,11 +7,14 @@ Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub t
 
 | Component                     | Version           | Set in                  |
 | ----------------------------- | ----------------- | ----------------------- |
-| Corridor Hub                  | 0.10.0            | `.env` `HUB_VERSION`      |
-| Operational display           | 0.10.0            | `.env` `FRONTEND_VERSION` |
+| Corridor Hub                  | 0.13.0            | `.env` `HUB_VERSION`      |
+| Operational display           | 0.13.0            | `.env` `FRONTEND_VERSION` |
 | CIGS                          | 0.5.0             | `.env` `CIGS_VERSION`     |
 | Face Matcher                  | v5_4.43.0.10149   | `face-matcher/.env` `VERSION` |
-| Face Matcher UI               | 2.1.1             | `face-matcher/.env` `FACE_MATCHER_UI_VERSION` |
+| Face Matcher UI               | 2.1.2             | `face-matcher/.env` `FACE_MATCHER_UI_VERSION` |
+| DSS, CEA (optional)           | 0.3.1             | `dxm/.env` (see [dxm/](dxm/README.md)) |
+
+Display 0.13.0 needs Hub 0.13.0; the fallback is 0.12.0 for both. Since Hub 0.12.0 identification comes from CIGS: with CIGS stopped or `CIGS_SOURCE_ENABLED=false` the Hub identifies no one and does not warn. Start order is CIGS, Hub, Display; compose waits for CIGS to be healthy before it starts the Hub.
 
 # Deployment
 
@@ -56,6 +59,10 @@ Without the gateway, ports are published on all interfaces with default credenti
 **Clearance.** Every watchlist match is GREEN unless its watchlist is listed in `VPP_ADAPTER_DENIED_WATCHLISTS` (ids or globs such as `red.*`); then it is RED. `*` makes every match RED.
 
 **Zone notifications.** The Hub can emit `zone.*` events (entered, left, occupancy, counts) on the `corridorEvents` subscription. See the commented example in `.env.hub`.
+
+**Remote TIS (optional).** `dxm/` adds DSS, which syncs travelers of upcoming journeys from a Traveler Identity Service into Face Matcher watchlists, and CEA, which reports corridor visits back to TIS as Encounters. See [dxm/README.md](dxm/README.md).
+
+**Document scans** in the display's person detail and History need `HUB_DOCUMENT_IMAGES` and the DSS's `DSS_DOCUMENT_IMAGES`, and are allowed on isolated nodes only. Both are off here; the display works without them.
 
 # The gateway
 

@@ -1,0 +1,70 @@
+# DSS and CEA: a compose project of its own, so the corridor's start.sh (up --remove-orphans) leaves it alone.
+# docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d   (add --profile relay where needed, README.md)
+name: smart-corridor-dxm
+
+services:
+  dss:
+    image: ${REGISTRY}corridor-data-synchronization-service:${DSS_VERSION}
+    platform: linux/amd64
+    container_name: sceg-dss
+    restart: unless-stopped
+    # ONE instance, never scaled: one run coordinator owns this Face Matcher's DSS watchlists.
+    mem_limit: 1g
+    ports: ["127.0.0.1:${DSS_PORT}:8660"]
+    env_file:
+      - ./dss.env
+      - ${DXM_SECRETS_DIR}/tis-dss.env          # TIS_CLIENT_SECRET=…
+    environment:
+      TIS_BASE_URL: ${TIS_BASE_URL:?set TIS_BASE_URL in dxm/.env}
+      TIS_AUTH_MODE: clientCredentials
+      TIS_TOKEN_URL: ${TIS_TOKEN_URL:?set TIS_TOKEN_URL in dxm/.env}
+      TIS_CLIENT_ID: ${DSS_TIS_CLIENT_ID:?set DSS_TIS_CLIENT_ID in dxm/.env}
+      DSS_DEPLOYMENT_ID: ${DSS_DEPLOYMENT_ID:?set DSS_DEPLOYMENT_ID in dxm/.env}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  cea:
+    image: ${REGISTRY}corridor-event-aggregation-service:${CEA_VERSION}
+    platform: linux/amd64
+    container_name: sceg-cea
+    restart: unless-stopped
+    # ONE instance, never scaled: one intake thread decides visits in arrival order.
+    mem_limit: 1g
+    ports: ["127.0.0.1:${CEA_PORT}:8670"]
+    env_file:
+      - ./cea.env
+      - ${DXM_SECRETS_DIR}/tis-cea.env          # CEA_TIS_CLIENT_SECRET=…
+      - ${DXM_SECRETS_DIR}/cea-local.env        # CEA_DB_PASSWORD, CEA_AMQP_PASSWORD, CEA_ADMIN_TOKEN
+    environment:
+      CEA_TIS_BASE_URL: ${TIS_BASE_URL:?set TIS_BASE_URL in dxm/.env}
+      CEA_TIS_AUTH_MODE: clientCredentials
+      CEA_TIS_TOKEN_URL: ${TIS_TOKEN_URL:?set TIS_TOKEN_URL in dxm/.env}
+      CEA_TIS_CLIENT_ID: ${CEA_TIS_CLIENT_ID:?set CEA_TIS_CLIENT_ID in dxm/.env}
+      CEA_DSS_DEPLOYMENT: ${DSS_DEPLOYMENT_ID:?set DSS_DEPLOYMENT_ID in dxm/.env}
+      CEA_SCOPES: ${CEA_SCOPES}
+      CEA_PASSAGE_QUIET: ${CEA_PASSAGE_QUIET}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  # Only where TIS's presign host does not resolve from this host.
+  tis-object-store:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    container_name: sceg-tis-object-store
+    restart: unless-stopped
+    profiles: [relay]
+    environment:
+      LISTEN_PORT: "${TIS_OBJECT_STORE_PORT}"
+      UPSTREAM: "${TIS_OBJECT_STORE_UPSTREAM}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        printf 'pid /tmp/nginx.pid;\nevents {}\nstream {\n  server {\n    listen %s;\n    proxy_pass %s;\n  }\n}\n' \
+          "$$LISTEN_PORT" "$$UPSTREAM" > /tmp/nginx.conf
+        exec nginx -c /tmp/nginx.conf -g 'daemon off;'
+    networks:
+      default:
+        aliases: ["${TIS_OBJECT_STORE_HOST}"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+networks:
+  default:
+    name: face-matcher-network
+    external: true
