@@ -20,10 +20,10 @@ services:
       CORRIDOR_HOST: ${CORRIDOR_HOST:?start.sh sets it}
     ports:
       - "8095:8095"   # Operational Display
-      - "8000:8000"   # Face Matcher UI
+      - "8000:8000"   # FaceMatcher UI
       - "8090:8090"   # Corridor Hub API
-      - "8098:8098"   # Face Matcher REST API
-      - "8097:8097"   # Face Matcher GraphQL API
+      - "8098:8098"   # FaceMatcher REST API
+      - "8097:8097"   # FaceMatcher GraphQL API
       - "8443:8443"   # Keycloak: the login pages and the token endpoint
       - "8883:8883"   # MQTT over TLS, for cameras that publish to the broker
     volumes:

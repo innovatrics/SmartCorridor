@@ -1,17 +1,17 @@
-# Smart Corridor
+# SmartCorridor
 
 > [!CAUTION]
 > **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.** Authentication is off by default. For production, turn on [the gateway](#the-gateway). See the [documentation](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/).
 
-Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS (Corridor Identity Grouping Service) groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `face-matcher/` and started by `start.sh`.
+Corridor and e-gate clearance on top of [FaceMatcher](facematcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS (Corridor Identity Grouping Service) groups detections into identities, and the operational display is the officer dashboard. FaceMatcher is vendored in `facematcher/` and started by `start.sh`.
 
 | Component                     | Version           | Set in                  |
 | ----------------------------- | ----------------- | ----------------------- |
 | Corridor Hub                  | 0.10.0            | `.env` `HUB_VERSION`      |
 | Operational display           | 0.10.0            | `.env` `FRONTEND_VERSION` |
 | CIGS                          | 0.5.0             | `.env` `CIGS_VERSION`     |
-| Face Matcher                  | v5_4.43.0.10149   | `face-matcher/.env` `VERSION` |
-| Face Matcher UI               | 2.1.1             | `face-matcher/.env` `FACE_MATCHER_UI_VERSION` |
+| FaceMatcher                  | v5_4.43.0.10149   | `facematcher/.env` `VERSION` |
+| FaceMatcher UI               | 2.1.1             | `facematcher/.env` `FACE_MATCHER_UI_VERSION` |
 
 # Deployment
 
@@ -28,7 +28,7 @@ Before deploying, you will need:
 
 ## Running
 
-- `start.sh` - starts Face Matcher, then the corridor services
+- `start.sh` - starts FaceMatcher, then the corridor services
 - `stop.sh` - stops everything, keeps data
 - `factory-reset.sh` - stops everything and deletes containers, images and volumes
 
@@ -38,7 +38,7 @@ Before deploying, you will need:
 | Hub GraphQL        | http://localhost:8090/corridor-hub/graphql  |                            |
 | Hub GraphiQL       | http://localhost:8090/corridor-hub/graphiql |                            |
 | CIGS health        | http://localhost:8096/actuator/health       |                            |
-| Face Matcher UI    | http://localhost:8000                       |                            |
+| FaceMatcher UI    | http://localhost:8000                       |                            |
 | REST API           | http://localhost:8098                       |                            |
 | GraphQL API        | http://localhost:8097/graphql               |                            |
 | RabbitMQ           | http://localhost:15672                      | guest / guest              |
@@ -51,11 +51,13 @@ Without the gateway, ports are published on all interfaces with default credenti
 
 - `.env` - corridor image versions, dashboard port, gateway switch (`CORRIDOR_GATEWAY_ENABLED`, `CORRIDOR_HOST`)
 - `.env.hub` - Hub settings, documented inline: denied watchlists, dead-letter expiry, database, corridor units and cameras, storage, zone notifications
-- `face-matcher/` - a copy of the [Face Matcher](face-matcher/README.md) repository. Do not edit it, except `face-matcher/.env.face-matcher-ui`, which carries the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
+- `facematcher/` - a copy of the [FaceMatcher](facematcher/README.md) repository. Do not edit it, except `facematcher/.env.face-matcher-ui`, which carries the SmartCorridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
 
 **Clearance.** Every watchlist match is GREEN unless its watchlist is listed in `VPP_ADAPTER_DENIED_WATCHLISTS` (ids or globs such as `red.*`); then it is RED. `*` makes every match RED.
 
 **Zone notifications.** The Hub can emit `zone.*` events (entered, left, occupancy, counts) on the `corridorEvents` subscription. See the commented example in `.env.hub`.
+
+**Upgrading from a package with `face-matcher/`.** The vendored copy is now in `facematcher/`. Containers, network and volumes keep their names, so data stays. After the update, carry over your own edits of `face-matcher/.env.face-matcher-ui` and anything you put in `face-matcher/secrets/` (other than the `iengine.lic` link, which `start.sh` recreates) into `facematcher/`, then delete `face-matcher/`.
 
 # The gateway
 
@@ -64,10 +66,10 @@ With `CORRIDOR_GATEWAY_ENABLED=true` in `.env`, `start.sh` puts Envoy and the co
 | Port | Service                  | Role                                                            |
 | ---- | ------------------------ | --------------------------------------------------------------- |
 | 8095 | Corridor dashboard       | `corridor-operator`                                             |
-| 8000 | Face Matcher UI          | `face-matcher-admin`                                            |
+| 8000 | FaceMatcher UI          | `face-matcher-admin`                                            |
 | 8090 | Hub API                  | `corridor-integrator`; `/corridor-hub/admin/`: `corridor-admin` |
-| 8098 | Face Matcher REST API    | `corridor-integrator` or `corridor-admin`                       |
-| 8097 | Face Matcher GraphQL API | `corridor-integrator` or `corridor-admin`                       |
+| 8098 | FaceMatcher REST API    | `corridor-integrator` or `corridor-admin`                       |
+| 8097 | FaceMatcher GraphQL API | `corridor-integrator` or `corridor-admin`                       |
 | 8443 | Keycloak                 | login pages and tokens                                          |
 | 8883 | MQTT over TLS            | the broker's own credentials                                    |
 

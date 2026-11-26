@@ -1,8 +1,8 @@
 # Licensed material — never commit. start.sh links secrets/iengine.lic into the vendored
-# Face Matcher, whose own .gitignore covers those links as well.
+# FaceMatcher, whose own .gitignore covers those links as well.
 secrets/*.lic
-face-matcher/secrets/*.lic
-face-matcher/iengine.lic
+facematcher/secrets/*.lic
+facematcher/iengine.lic
 # The gateway's secrets and certificate, written by start.sh (or the site's own certificate)
 secrets/gateway/
 secrets/tls/

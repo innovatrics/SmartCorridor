@@ -69,7 +69,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-8095}:8080"
     environment:
-      # Corridor data comes from the Hub. The dashboard's nginx calls Face Matcher itself, server-side: GraphQL
+      # Corridor data comes from the Hub. The dashboard's nginx calls FaceMatcher itself, server-side: GraphQL
       # (POST only) for watchlist members and cameras, REST (GET only) for face images. Both are required.
       HUB_URL: http://sceg-hub:8090
       FACE_MATCHER_GQL_URL: http://graphql-api:8080
@@ -78,7 +78,7 @@ services:
       # CORRIDOR_SCORE_BANDS: '{"threshold":80,"lower":{"label":"Low","positive":"#f5d547","negative":"#ffa726"},"upper":{"label":"High","positive":"#59e670","negative":"#e65959"}}'
       # Operator words: unidentified, cleared, blacklisted, deniedWatchlist, liveFace, enrolledFace, connectionLost.
       # CORRIDOR_PRESENTATION_LABELS: '{"unidentified":"Unidentified"}'
-      # Face Matcher UI serves the live camera preview through the frontend nginx. Unset: Cameras panel shows "unavailable".
+      # FaceMatcher UI serves the live camera preview through the frontend nginx. Unset: Cameras panel shows "unavailable".
       FACE_MATCHER_STATION_URL: http://face-matcher-ui:8000
     # Requires the smart_corridor.operational_display license block.
     volumes:

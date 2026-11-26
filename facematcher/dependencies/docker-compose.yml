@@ -117,7 +117,7 @@ configs:
       {
         "Servers": {
           "1": {
-            "Name": "Face Matcher",
+            "Name": "FaceMatcher",
             "Group": "Servers",
             "Host": "pgsql",
             "Port": 5432,

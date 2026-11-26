@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-# Starts Face Matcher (face-matcher/), then the corridor services. With the gateway on (CORRIDOR_GATEWAY_ENABLED=true
+# Starts FaceMatcher (facematcher/), then the corridor services. With the gateway on (CORRIDOR_GATEWAY_ENABLED=true
 # in .env) also the corridor's Keycloak and the gateway, the only container that then publishes ports.
 # MCT is separate, see README.md.
 
-# Face Matcher UI shows no identification view in a corridor: the dashboard shows the matches.
+# FaceMatcher UI shows no identification view in a corridor: the dashboard shows the matches.
 export FACE_MATCHER_UI_IDENTIFICATION=false
 
 setting() { grep -E "^$1=" ./.env | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r$//' -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]+$//'; }
@@ -16,13 +16,13 @@ case "$GATEWAY" in
   *) echo "ERROR: CORRIDOR_GATEWAY_ENABLED in .env must be true or false, not '$GATEWAY'. See README.md." >&2; exit 1 ;;
 esac
 
-# One license for everything. Face Matcher looks for it in its own secrets/.
+# One license for everything. FaceMatcher looks for it in its own secrets/.
 if [ ! -f ./secrets/iengine.lic ]; then
   echo "ERROR: secrets/iengine.lic not found. See README.md." >&2
   exit 1
 fi
 chmod a+r ./secrets/iengine.lic
-[ -e ./face-matcher/secrets/iengine.lic ] || ln -sf ../../secrets/iengine.lic ./face-matcher/secrets/iengine.lic
+[ -e ./facematcher/secrets/iengine.lic ] || ln -sf ../../secrets/iengine.lic ./facematcher/secrets/iengine.lic
 
 COMPOSE=(docker compose -f ./docker-compose.yml -f ./docker-compose.gateway.yml --env-file ./.env)
 # The gateway's file is always named, so that switching the gateway off removes its containers too.
@@ -35,20 +35,20 @@ if [ "$GATEWAY" = true ]; then
   mkdir -p ./secrets
   docker run --rm --user "$CORRIDOR_UID_GID" -e CORRIDOR_HOST -v "$PWD/secrets:/secrets" \
     -v "$PWD/gateway/make-secrets.sh:/make-secrets.sh:ro" --entrypoint /bin/sh "$(setting GATEWAY_IMAGE)" /make-secrets.sh
-  # Face Matcher's services publish no port, its dependencies only on this host's loopback: the gateway reaches them
+  # FaceMatcher's services publish no port, its dependencies only on this host's loopback: the gateway reaches them
   # on face-matcher-network.
-  export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.override.yml}:../gateway/face-matcher.gateway.yml"
+  export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.override.yml}:../gateway/facematcher.gateway.yml"
   export DEPENDENCIES_BIND_ADDRESS=127.0.0.1
 else
   unset DEPENDENCIES_BIND_ADDRESS
-  # Turned off after it was on: the gateway holds the ports Face Matcher's services take back, so it goes first.
+  # Turned off after it was on: the gateway holds the ports FaceMatcher's services take back, so it goes first.
   "${COMPOSE[@]}" rm --stop --force gateway keycloak >/dev/null 2>&1 || true
 fi
 
-(cd ./face-matcher && bash run.sh)
+(cd ./facematcher && bash run.sh)
 
 # The Hub's own database on the platform PostgreSQL: waits for pgsql, creates it only when missing.
-# The password is POSTGRES_PASSWORD from face-matcher/dependencies/docker-compose.yml.
+# The password is POSTGRES_PASSWORD from facematcher/dependencies/docker-compose.yml.
 docker run --rm -i --network face-matcher-network -e PGPASSWORD=Test1234 postgres:18.6 \
   sh -c 'until pg_isready -q -h pgsql -U postgres; do sleep 1; done; psql -v ON_ERROR_STOP=1 -q -h pgsql -U postgres' <<'SQL'
 SELECT 'CREATE DATABASE corridorhub' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'corridorhub')\gexec
@@ -70,7 +70,7 @@ fi
 # Create the Hub's crop bucket on the platform's S3 storage.
 # The admin command gives S3 5 seconds and does not retry. SeaweedFS can be slower than that
 # while the platform services start, so retry; an existing bucket counts as success.
-PLATFORM=./face-matcher
+PLATFORM=./facematcher
 getvalue() { grep -E "^$1=" "$PLATFORM/.env" | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r$//' -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]+$//'; }
 BUCKET_ATTEMPTS=12
 for attempt in $(seq 1 "$BUCKET_ATTEMPTS"); do
@@ -103,7 +103,7 @@ if [ "$GATEWAY" = true ]; then
     || { echo "ERROR: Keycloak did not become ready; see docker logs sceg-keycloak" >&2; exit 1; }
   echo ""
   echo "Corridor dashboard : https://$CORRIDOR_HOST:8095"
-  echo "Face Matcher UI    : https://$CORRIDOR_HOST:8000"
+  echo "FaceMatcher UI    : https://$CORRIDOR_HOST:8000"
   echo "Hub GraphQL        : https://$CORRIDOR_HOST:8090/corridor-hub/graphql (token)"
   echo "REST API           : https://$CORRIDOR_HOST:8098 (token)"
   echo "GraphQL API        : https://$CORRIDOR_HOST:8097/graphql (token)"
@@ -115,7 +115,7 @@ else
   echo "Corridor dashboard : http://localhost:8095"
   echo "Hub GraphQL        : http://localhost:8090/corridor-hub/graphql"
   echo "CIGS health        : http://localhost:8096/actuator/health"
-  echo "Face Matcher UI    : http://localhost:8000"
+  echo "FaceMatcher UI    : http://localhost:8000"
   echo "REST API           : http://localhost:8098"
   echo "GraphQL API        : http://localhost:8097/graphql"
 fi
