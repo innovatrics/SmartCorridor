@@ -7,7 +7,7 @@
 #
 # PREREQUISITES (see the MCT section of ../README.md):
 #   * the base stack is up (start.sh) — MCT joins its `face-matcher-network` and reads its `rmq`,
-#   * a per-camera detection feed from SmartFace Embedded Stream Processor cameras, delivered into
+#   * a per-camera detection feed from cameras running the Embedded Stream Processor, delivered into
 #     that `rmq` over MQTT as edge-stream/<clientId>/frame_data,
 #   * a calibration model for your cameras, loaded into the Config API (MCT_MODEL).
 #
@@ -27,7 +27,7 @@
 # reads the stack's `rmq` directly. The wedge appears to have been a consequence of that extra
 # broker rather than of the tracker: it ran RabbitMQ's default 30-minute consumer_timeout, which
 # force-closes a consumer that stalls on one message, while the stack's own `rmq` is configured
-# for 6 hours (../face-matcher/dependencies/docker-compose.yml). Reading from `rmq` inherits that, so
+# for 6 hours (../facematcher/dependencies/docker-compose.yml). Reading from `rmq` inherits that, so
 # there is nothing left for a watchdog to recover from — and no reason to hand a container the
 # Docker socket.
 
@@ -158,9 +158,9 @@ services:
       RMQ__Password: ${MCT_RMQ_PASSWORD:?error}
       RMQ__PublicationAddress: fanout://mct_tracker.tracking_updates/
 
-  # Joins the track stream with SmartFace `frame.processed` notifications (tracklet UUIDs are
+  # Joins the track stream with Face Matcher `frame.processed` notifications (tracklet UUIDs are
   # camera-assigned, so both sides agree) and publishes PositionMessages — this is what puts
-  # names on the dots when SmartFace ingests the same camera feed as edge streams.
+  # names on the dots when Face Matcher ingests the same camera feed as edge streams.
   identityIdentifier:
     platform: linux/amd64
     image: ${MCT_REGISTRY:?error}mct-identifier:${MCT_TAG:?error}
@@ -170,6 +170,7 @@ services:
       - "8003:80"
     environment:
       ASPNETCORE_URLS: "http://*:80"
+      # RabbitMQ__SmartFace__* is the identifier's own setting name for the Face Matcher broker.
       RabbitMQ__SmartFace__HostName: ${MCT_RMQ_HOST:?error}
       RabbitMQ__SmartFace__Port: ${MCT_RMQ_PORT:?error}
       RabbitMQ__SmartFace__UserName: ${MCT_RMQ_USERNAME:?error}

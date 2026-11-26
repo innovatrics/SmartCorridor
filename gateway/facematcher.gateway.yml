@@ -1,4 +1,4 @@
-# Added to face-matcher/'s compose files by start.sh when the gateway is on: the platform's services publish no
+# Added to facematcher/'s compose files by start.sh when the gateway is on: the platform's services publish no
 # port; the gateway reaches them on face-matcher-network.
 services:
   face-matcher-ui:

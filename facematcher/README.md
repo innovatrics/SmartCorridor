@@ -145,7 +145,7 @@ A site with the login on: a new version of this package brings `.env.face-matche
 
 ## Upgrading from v1.0.0
 
-v1.0.0 ran SmartFace Station. This version runs Face Matcher UI 2.1.1 in its place, on the same port. The old names are gone, without aliases:
+v1.0.0 ran Station, the former web UI. This version runs Face Matcher UI 2.1.1 in its place, on the same port. The old names are gone, without aliases:
 
 | v1.0.0                                                      | Now                                                                                  |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |

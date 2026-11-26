@@ -3,15 +3,15 @@
 > [!CAUTION]
 > **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.** Authentication is off by default. For production, turn on [the gateway](#the-gateway). See the [documentation](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/).
 
-Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS (Corridor Identity Grouping Service) groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `face-matcher/` and started by `start.sh`.
+Corridor and e-gate clearance on top of [Face Matcher](facematcher/). The Hub turns identifications into per-traveller clearance decisions, CIGS (Corridor Identity Grouping Service) groups detections into identities, and the operational display is the officer dashboard. Face Matcher is vendored in `facematcher/` and started by `start.sh`.
 
 | Component                     | Version           | Set in                  |
 | ----------------------------- | ----------------- | ----------------------- |
 | Corridor Hub                  | 0.10.0            | `.env` `HUB_VERSION`      |
 | Operational display           | 0.10.0            | `.env` `FRONTEND_VERSION` |
 | CIGS                          | 0.5.0             | `.env` `CIGS_VERSION`     |
-| Face Matcher                  | v5_4.43.0.10149   | `face-matcher/.env` `VERSION` |
-| Face Matcher UI               | 2.1.1             | `face-matcher/.env` `FACE_MATCHER_UI_VERSION` |
+| Face Matcher                  | v5_4.43.0.10149   | `facematcher/.env` `VERSION` |
+| Face Matcher UI               | 2.1.1             | `facematcher/.env` `FACE_MATCHER_UI_VERSION` |
 
 # Deployment
 
@@ -51,11 +51,13 @@ Without the gateway, ports are published on all interfaces with default credenti
 
 - `.env` - corridor image versions, dashboard port, gateway switch (`CORRIDOR_GATEWAY_ENABLED`, `CORRIDOR_HOST`)
 - `.env.hub` - Hub settings, documented inline: denied watchlists, dead-letter expiry, database, corridor units and cameras, storage, zone notifications
-- `face-matcher/` - a copy of the [Face Matcher](face-matcher/README.md) repository. Do not edit it, except `face-matcher/.env.face-matcher-ui`, which carries the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
+- `facematcher/` - a copy of the [Face Matcher](facematcher/README.md) repository. Do not edit it, except `facematcher/.env.face-matcher-ui`, which carries the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
 
 **Clearance.** Every watchlist match is GREEN unless its watchlist is listed in `VPP_ADAPTER_DENIED_WATCHLISTS` (ids or globs such as `red.*`); then it is RED. `*` makes every match RED.
 
 **Zone notifications.** The Hub can emit `zone.*` events (entered, left, occupancy, counts) on the `corridorEvents` subscription. See the commented example in `.env.hub`.
+
+**Upgrading from a package with `face-matcher/`.** The vendored copy is now in `facematcher/`. Containers, network and volumes keep their names, so data stays. After the update, carry over your own edits of `face-matcher/.env.face-matcher-ui` and anything you put in `face-matcher/secrets/` (other than the `iengine.lic` link, which `start.sh` recreates) into `facematcher/`, then delete `face-matcher/`.
 
 # The gateway
 

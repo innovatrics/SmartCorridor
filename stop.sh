@@ -5,4 +5,4 @@ set -e
 # separate, see README.md.
 export CORRIDOR_UID_GID="$(id -u):$(id -g)" CORRIDOR_HOST="${CORRIDOR_HOST:-$(hostname)}"
 docker compose -f ./docker-compose.yml -f ./docker-compose.gateway.yml --env-file ./.env down
-(cd ./face-matcher && bash stop.sh)
+(cd ./facematcher && bash stop.sh)

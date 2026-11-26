@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# Starts Face Matcher (face-matcher/), then the corridor services. With the gateway on (CORRIDOR_GATEWAY_ENABLED=true
+# Starts Face Matcher (facematcher/), then the corridor services. With the gateway on (CORRIDOR_GATEWAY_ENABLED=true
 # in .env) also the corridor's Keycloak and the gateway, the only container that then publishes ports.
 # MCT is separate, see README.md.
 
@@ -22,7 +22,7 @@ if [ ! -f ./secrets/iengine.lic ]; then
   exit 1
 fi
 chmod a+r ./secrets/iengine.lic
-[ -e ./face-matcher/secrets/iengine.lic ] || ln -sf ../../secrets/iengine.lic ./face-matcher/secrets/iengine.lic
+[ -e ./facematcher/secrets/iengine.lic ] || ln -sf ../../secrets/iengine.lic ./facematcher/secrets/iengine.lic
 
 COMPOSE=(docker compose -f ./docker-compose.yml -f ./docker-compose.gateway.yml --env-file ./.env)
 # The gateway's file is always named, so that switching the gateway off removes its containers too.
@@ -37,7 +37,7 @@ if [ "$GATEWAY" = true ]; then
     -v "$PWD/gateway/make-secrets.sh:/make-secrets.sh:ro" --entrypoint /bin/sh "$(setting GATEWAY_IMAGE)" /make-secrets.sh
   # Face Matcher's services publish no port, its dependencies only on this host's loopback: the gateway reaches them
   # on face-matcher-network.
-  export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.override.yml}:../gateway/face-matcher.gateway.yml"
+  export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.override.yml}:../gateway/facematcher.gateway.yml"
   export DEPENDENCIES_BIND_ADDRESS=127.0.0.1
 else
   unset DEPENDENCIES_BIND_ADDRESS
@@ -45,10 +45,10 @@ else
   "${COMPOSE[@]}" rm --stop --force gateway keycloak >/dev/null 2>&1 || true
 fi
 
-(cd ./face-matcher && bash run.sh)
+(cd ./facematcher && bash run.sh)
 
 # The Hub's own database on the platform PostgreSQL: waits for pgsql, creates it only when missing.
-# The password is POSTGRES_PASSWORD from face-matcher/dependencies/docker-compose.yml.
+# The password is POSTGRES_PASSWORD from facematcher/dependencies/docker-compose.yml.
 docker run --rm -i --network face-matcher-network -e PGPASSWORD=Test1234 postgres:18.6 \
   sh -c 'until pg_isready -q -h pgsql -U postgres; do sleep 1; done; psql -v ON_ERROR_STOP=1 -q -h pgsql -U postgres' <<'SQL'
 SELECT 'CREATE DATABASE corridorhub' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'corridorhub')\gexec
@@ -70,7 +70,7 @@ fi
 # Create the Hub's crop bucket on the platform's S3 storage.
 # The admin command gives S3 5 seconds and does not retry. SeaweedFS can be slower than that
 # while the platform services start, so retry; an existing bucket counts as success.
-PLATFORM=./face-matcher
+PLATFORM=./facematcher
 getvalue() { grep -E "^$1=" "$PLATFORM/.env" | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r$//' -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]+$//'; }
 BUCKET_ATTEMPTS=12
 for attempt in $(seq 1 "$BUCKET_ATTEMPTS"); do
