@@ -15,6 +15,9 @@ services:
       - "8090:8090"
     env_file:
       - ./.env.hub
+      # Document scans only (dxm/README.md): the Hub's read identity and namespace, written by dxm/setup-documents.sh.
+      - path: ${DXM_SECRETS_DIR:-/nonexistent}/documents-hub.env
+        required: false
     environment:
       STORAGE_S3_ENDPOINT: http://seaweedfs:8333
     # Requires the smart_corridor.hub license block.
