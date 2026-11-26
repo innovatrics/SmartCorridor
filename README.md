@@ -66,7 +66,7 @@ Without the gateway, ports are published on all interfaces with default credenti
 
 **Remote TIS (optional).** `dxm/` adds DSS, which syncs the enrolled travelers of a Traveler Identity Service into a FaceMatcher watchlist, and CEA, which reports corridor visits back to TIS as Encounters. See [dxm/README.md](dxm/README.md).
 
-**Document scans** in the display's person detail and History need the Hub's `HUB_DOCUMENT_IMAGES_ENABLED` and the DSS's `DOCUMENT_IMAGES`, each with its own storage settings, and are allowed on isolated nodes only. Both are off here; the display works without them.
+**Document scans** (passport pages) in the display's person detail and History come from TIS through `dxm/`. They are off by default, and are switched on only where the deployment's owner has accepted copies of travel documents on this machine: see [dxm/README.md](dxm/README.md#document-scans-passport-pages-in-the-operational-display). The display works without them.
 
 **Upgrading from a package with `face-matcher/`.** The vendored copy is now in `facematcher/`. Containers, network and volumes keep their names, so data stays. After the update, carry over your own edits of `face-matcher/.env.face-matcher-ui` and anything you put in `face-matcher/secrets/` (other than the `iengine.lic` link, which `start.sh` recreates) into `facematcher/`, then delete `face-matcher/`.
 
