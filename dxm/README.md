@@ -24,7 +24,7 @@ DSS and CEA are amd64-only. On Apple Silicon turn on Docker Desktop → "Use Ros
 - The corridor running (`start.sh`), with the Hub at 0.12.0 or later.
 - TIS reachable from this host, its token endpoint included, without an interactive login in front of it (TIS checks its own OAuth tokens).
 - Two TIS clients with the client-credentials grant: one for the DSS, one for CEA.
-- TIS 0.34.0 or later. The DSS reads portraits through TIS's API (`TIS_OBJECT_DOWNLOAD=content` in `dxm/dss.env`, `GET /api/v1/stored-objects/{id}/content`) with its own token, so TIS's object store need not be reachable from here. An older TIS has no such endpoint: every portrait fails and no one is synced.
+- TIS 0.34.0 or later. The DSS reads portraits through TIS's API (`TIS_OBJECT_DOWNLOAD=content` in `dxm/dss.env`, `GET /api/v1/stored-objects/{id}/content`) with its own token, so TIS's object store need not be reachable from here. Against an older TIS, which has no such endpoint, the DSS stops every run and syncs no one.
 - Test data only: the DSS copies every synced traveler's portrait and name into this FaceMatcher.
 
 ## Configuration
@@ -74,4 +74,4 @@ Ready when both answer 200:
 
 - **TIS → corridor.** `curl -s http://127.0.0.1:8660/corridor-data-synchronization-service/status`: route r1's `lastSync.outcome` is `succeeded`, `tisReachable` and `vppReachable` are true, and FaceMatcher UI shows the `dxm.r1.flight.…` watchlists.
 - **Corridor → TIS.** A synced traveler passes a camera: the display shows the identification, `curl -s http://127.0.0.1:8090/corridor-hub/actuator/prometheus | grep hub_cea_export_total` counts published and acked, `curl -s http://127.0.0.1:8670/corridor-event-aggregation-service/status` shows a visit, and `CEA_PASSAGE_QUIET` later TIS has an Encounter at location `DSS_DEPLOYMENT_ID`.
-- **Typical failures.** `tisAuthRejected`: wrong or missing client secret. `tisReachable=false`: URL or network. Route r1's `lastSync.outcome` `degraded` with `stored object content failed` in `docker logs sceg-dss`: a TIS older than 0.34.0, or the portrait is missing in TIS.
+- **Typical failures.** `tisAuthRejected`: wrong or missing client secret. `tisReachable=false`: URL or network. Route r1's `lastSync.outcome` `failed` with `TIS_OBJECT_DOWNLOAD=content needs a TIS with the stored-object content endpoint`: TIS is older than 0.34.0. `degraded` with `stored object content failed` in `docker logs sceg-dss`: that traveler's portrait is missing in TIS.
