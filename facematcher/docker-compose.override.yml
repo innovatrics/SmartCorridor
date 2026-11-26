@@ -1,4 +1,4 @@
-# Not part of the release package: Face Matcher UI, restart: unless-stopped on every service, and user: root on
+# Not part of the release package: FaceMatcher UI, restart: unless-stopped on every service, and user: root on
 # the 19 services that load a biometric engine or match templates. Since v5_4.41.1 the images run as uid 10001,
 # but the licensing library reads root-only hardware identifiers, derives a different HWID and rejects the
 # license ("License has different HWID than this machine"). Verified on v5_4.43.0.10149; the other 5 services

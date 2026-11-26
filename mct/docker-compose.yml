@@ -158,9 +158,9 @@ services:
       RMQ__Password: ${MCT_RMQ_PASSWORD:?error}
       RMQ__PublicationAddress: fanout://mct_tracker.tracking_updates/
 
-  # Joins the track stream with Face Matcher `frame.processed` notifications (tracklet UUIDs are
+  # Joins the track stream with FaceMatcher `frame.processed` notifications (tracklet UUIDs are
   # camera-assigned, so both sides agree) and publishes PositionMessages — this is what puts
-  # names on the dots when Face Matcher ingests the same camera feed as edge streams.
+  # names on the dots when FaceMatcher ingests the same camera feed as edge streams.
   identityIdentifier:
     platform: linux/amd64
     image: ${MCT_REGISTRY:?error}mct-identifier:${MCT_TAG:?error}
@@ -170,7 +170,7 @@ services:
       - "8003:80"
     environment:
       ASPNETCORE_URLS: "http://*:80"
-      # RabbitMQ__SmartFace__* is the identifier's own setting name for the Face Matcher broker.
+      # RabbitMQ__SmartFace__* is the identifier's own setting name for the FaceMatcher broker.
       RabbitMQ__SmartFace__HostName: ${MCT_RMQ_HOST:?error}
       RabbitMQ__SmartFace__Port: ${MCT_RMQ_PORT:?error}
       RabbitMQ__SmartFace__UserName: ${MCT_RMQ_USERNAME:?error}
