@@ -9,7 +9,7 @@ TIS ──travelers, journeys, portraits──▶ DSS ──watchlists, members�
 ```
 
 - **DSS** (corridor-data-synchronization-service) puts the travelers of upcoming journeys into FaceMatcher watchlists `dxm.r1.flight.<flight>.<yyyyMMddHHmm>`. Only ENROLLED travelers with a portrait are synced.
-- **CEA** (corridor-event-aggregation-service) collects the Hub's identifications of those travelers into visits and delivers each visit to TIS as an Encounter, `CEA_PASSAGE_QUIET` after the last match. Travelers TIS merged or rejected are parked.
+- **CEA** (corridor-event-aggregation-service) collects the Hub's identifications of those travelers into visits and delivers each visit to TIS as an Encounter within seconds of its first match. Matches less than `CEA_PASSAGE_QUIET` apart extend the visit; a match after a longer pause opens a new visit and a new Encounter. Travelers TIS merged or rejected are parked.
 
 | Service | Version | Port (loopback) |
 |---|---|---|
@@ -73,5 +73,5 @@ Ready when both answer 200:
 ## Checking
 
 - **TIS → corridor.** `curl -s http://127.0.0.1:8660/corridor-data-synchronization-service/status`: route r1's `lastSync.outcome` is `succeeded`, `tisReachable` and `vppReachable` are true, and FaceMatcher UI shows the `dxm.r1.flight.…` watchlists.
-- **Corridor → TIS.** A synced traveler passes a camera: the display shows the identification, `curl -s http://127.0.0.1:8090/corridor-hub/actuator/prometheus | grep hub_cea_export_total` counts published and acked, `curl -s http://127.0.0.1:8670/corridor-event-aggregation-service/status` shows a visit, and `CEA_PASSAGE_QUIET` later TIS has an Encounter at location `DSS_DEPLOYMENT_ID`.
+- **Corridor → TIS.** A synced traveler passes a camera: the display shows the identification, `curl -s http://127.0.0.1:8090/corridor-hub/actuator/prometheus | grep hub_cea_export_total` counts published and acked, `curl -s http://127.0.0.1:8670/corridor-event-aggregation-service/status` shows a visit, and within seconds TIS has an Encounter at location `DSS_DEPLOYMENT_ID`.
 - **Typical failures.** `tisAuthRejected`: wrong or missing client secret. `tisReachable=false`: URL or network. Route r1's `lastSync.outcome` `failed` with `TIS_OBJECT_DOWNLOAD=content needs a TIS with the stored-object content endpoint`: TIS is older than 0.34.0. `degraded` with `stored object content failed` in `docker logs sceg-dss`: that traveler's portrait is missing in TIS.
