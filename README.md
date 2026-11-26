@@ -64,7 +64,7 @@ Without the gateway, ports are published on all interfaces with default credenti
 
 **Zone notifications.** The Hub can emit `zone.*` events (entered, left, occupancy, counts) on the `corridorEvents` subscription. See the commented example in `.env.hub`.
 
-**Remote TIS (optional).** `dxm/` adds DSS, which syncs travelers of upcoming journeys from a Traveler Identity Service into FaceMatcher watchlists, and CEA, which reports corridor visits back to TIS as Encounters. See [dxm/README.md](dxm/README.md).
+**Remote TIS (optional).** `dxm/` adds DSS, which syncs the enrolled travelers of a Traveler Identity Service into a FaceMatcher watchlist, and CEA, which reports corridor visits back to TIS as Encounters. See [dxm/README.md](dxm/README.md).
 
 **Document scans** in the display's person detail and History need the Hub's `HUB_DOCUMENT_IMAGES_ENABLED` and the DSS's `DOCUMENT_IMAGES`, each with its own storage settings, and are allowed on isolated nodes only. Both are off here; the display works without them.
 

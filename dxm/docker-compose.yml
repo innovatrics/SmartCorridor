@@ -20,6 +20,7 @@ services:
       TIS_TOKEN_URL: ${TIS_TOKEN_URL:?set TIS_TOKEN_URL in dxm/.env}
       TIS_CLIENT_ID: ${DSS_TIS_CLIENT_ID:?set DSS_TIS_CLIENT_ID in dxm/.env}
       DSS_DEPLOYMENT_ID: ${DSS_DEPLOYMENT_ID:?set DSS_DEPLOYMENT_ID in dxm/.env}
+      ROUTE_1_DESTINATION: ${DSS_WATCHLIST_ID:?create the watchlist and set DSS_WATCHLIST_ID in dxm/.env (dxm/README.md)}
     extra_hosts: ["host.docker.internal:host-gateway"]
 
   cea:
