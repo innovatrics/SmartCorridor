@@ -1,4 +1,4 @@
-# Smart Corridor
+# SmartCorridor
 
 > [!CAUTION]
 > **THIS IS FOR DEMO AND EVALUATION PURPOSES ONLY.** Authentication is off by default. For production, turn on [the gateway](#the-gateway). See the [documentation](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/).
@@ -51,7 +51,7 @@ Without the gateway, ports are published on all interfaces with default credenti
 
 - `.env` - corridor image versions, dashboard port, gateway switch (`CORRIDOR_GATEWAY_ENABLED`, `CORRIDOR_HOST`)
 - `.env.hub` - Hub settings, documented inline: denied watchlists, dead-letter expiry, database, corridor units and cameras, storage, zone notifications
-- `facematcher/` - a copy of the [Face Matcher](facematcher/README.md) repository. Do not edit it, except `facematcher/.env.face-matcher-ui`, which carries the Smart Corridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
+- `facematcher/` - a copy of the [Face Matcher](facematcher/README.md) repository. Do not edit it, except `facematcher/.env.face-matcher-ui`, which carries the SmartCorridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
 
 **Clearance.** Every watchlist match is GREEN unless its watchlist is listed in `VPP_ADAPTER_DENIED_WATCHLISTS` (ids or globs such as `red.*`); then it is RED. `*` makes every match RED.
 

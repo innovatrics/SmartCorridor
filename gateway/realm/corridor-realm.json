@@ -1,7 +1,7 @@
 {
   "realm": "corridor",
   "enabled": true,
-  "displayName": "Smart Corridor",
+  "displayName": "SmartCorridor",
   "sslRequired": "external",
   "registrationAllowed": false,
   "resetPasswordAllowed": false,

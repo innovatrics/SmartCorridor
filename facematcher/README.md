@@ -52,7 +52,7 @@ Not deployed: offline video processing, grouping, Milvus, Access Controller. The
 
 ## Turning the login on
 
-This section is for a standalone Face Matcher. In a Smart Corridor, Face Matcher UI's own login stays off: the corridor's gateway signs users in, in front of all its services; see the Smart Corridor README, "The gateway".
+This section is for a standalone Face Matcher. In a SmartCorridor, Face Matcher UI's own login stays off: the corridor's gateway signs users in, in front of all its services; see the SmartCorridor README, "The gateway".
 
 Face Matcher UI signs its users in through Keycloak (OpenID Connect). It has no other login. The official documentation: [Face Matcher](https://developers.innovatrics.com/docs/border-control/smart-biometric-corridors/face-matcher/).
 
@@ -119,7 +119,7 @@ Face Matcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_E
 
 ### What stays open with the login on
 
-- The login protects Face Matcher UI only. The REST and GraphQL APIs on ports 8098 and 8097 have no authentication, so whoever reaches them goes around the login. A standalone Face Matcher may turn their authentication on, never a Smart Corridor: in `.env`, section 3.3, `Authentication__UseAuthentication=true`, `Authentication__Authority=<KEYCLOAK_DOMAIN>/realms/<KEYCLOAK_REALM>` and `Authentication__Audience=face-matcher`; in Keycloak, an Audience mapper on the UI's client that adds `face-matcher` to its access tokens. The UI then calls the APIs with the token of the signed-in user. With a Keycloak certificate from a private authority, the APIs have to trust it as well, otherwise they refuse every token (HTTP 401): with the authority's certificate in `secrets/tls/ca.crt`, uncomment the `environment` and `volumes` lines at `api` and at `graphql-api` in `docker-compose.override.yml`.
+- The login protects Face Matcher UI only. The REST and GraphQL APIs on ports 8098 and 8097 have no authentication, so whoever reaches them goes around the login. A standalone Face Matcher may turn their authentication on, never a SmartCorridor: in `.env`, section 3.3, `Authentication__UseAuthentication=true`, `Authentication__Authority=<KEYCLOAK_DOMAIN>/realms/<KEYCLOAK_REALM>` and `Authentication__Audience=face-matcher`; in Keycloak, an Audience mapper on the UI's client that adds `face-matcher` to its access tokens. The UI then calls the APIs with the token of the signed-in user. With a Keycloak certificate from a private authority, the APIs have to trust it as well, otherwise they refuse every token (HTTP 401): with the authority's certificate in `secrets/tls/ca.crt`, uncomment the `environment` and `volumes` lines at `api` and at `graphql-api` in `docker-compose.override.yml`.
 - With `VIDEO_WITHOUT_LOGIN=true` the live camera video is readable without login.
 - Between the UI and the APIs the traffic, the user's token included, is plain HTTP on the compose network.
 - RabbitMQ, the S3 storage, PostgreSQL and pgAdmin stay published on all interfaces with default credentials. Change the credentials and restrict the ports.
