@@ -13,9 +13,9 @@ TIS ──travelers, journeys, portraits──▶ DSS ──watchlists, members�
 
 | Service | Version | Port (loopback) |
 |---|---|---|
-| DSS | 0.3.1 | 8660 |
+| DSS | 0.4.0 | 8660 |
 | CEA | 0.3.1 | 8670 |
-| TIS | 0.29.0 to 0.33.x (0.33.1 tested, with travel-hub 0.3.12) | remote |
+| TIS | 0.34.0 or later (the content endpoint the DSS reads portraits through) | remote |
 
 DSS and CEA are amd64-only. On Apple Silicon turn on Docker Desktop → "Use Rosetta for x86/amd64 emulation".
 
@@ -24,7 +24,7 @@ DSS and CEA are amd64-only. On Apple Silicon turn on Docker Desktop → "Use Ros
 - The corridor running (`start.sh`), with the Hub at 0.12.0 or later.
 - TIS reachable from this host, its token endpoint included, without an interactive login in front of it (TIS checks its own OAuth tokens).
 - Two TIS clients with the client-credentials grant: one for the DSS, one for CEA.
-- TIS's object store reachable from the containers under the host TIS signs download URLs for (`storage.s3.publicEndpoint`). If TIS signs for a name that does not resolve here, use the relay (below). The S3 signature covers host and path, so a proxy that rewrites them breaks every URL.
+- TIS 0.34.0 or later. The DSS reads portraits through TIS's API (`TIS_OBJECT_DOWNLOAD=content` in `dxm/dss.env`, `GET /api/v1/stored-objects/{id}/content`) with its own token, so TIS's object store need not be reachable from here. An older TIS has no such endpoint: every portrait fails and no one is synced.
 - Test data only: the DSS copies every synced traveler's portrait and name into this Face Matcher.
 
 ## Configuration
@@ -34,7 +34,6 @@ DSS and CEA are amd64-only. On Apple Silicon turn on Docker Desktop → "Use Ros
 - `TIS_BASE_URL`, `TIS_TOKEN_URL`: TIS with its context path, e.g. `https://tis.example/traveler-identity-service` and `…/traveler-identity-service/oauth2/token`. A TIS on this host: `http://host.docker.internal:<port>/…`.
 - `DSS_TIS_CLIENT_ID`, `CEA_TIS_CLIENT_ID`: the two clients.
 - `DSS_DEPLOYMENT_ID`: this corridor's name, unique on that TIS (`[a-z0-9][a-z0-9-]{0,31}`). It labels the members this DSS owns and is the Encounters' location.
-- Relay, only if needed: `TIS_OBJECT_STORE_HOST`/`PORT` as TIS signs them, `TIS_OBJECT_STORE_UPSTREAM` a reachable address of the same store.
 
 `dxm/dss.env` (route r1: journeys arriving in the next 24 h) and `dxm/cea.env` carry the services' settings. An unknown `CEA_*` name stops CEA at startup.
 
@@ -59,7 +58,7 @@ Outside any repository, in `DXM_SECRETS_DIR` (default `~/.config/smart-corridor/
 
 ```
 dxm/setup.sh                                                            # once, and after factory-reset.sh
-docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d      # add --profile relay for the relay
+docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d
 ```
 
 `setup.sh` creates CEA's database and role on the corridor's PostgreSQL, and the `cea.export` exchange, `cea.identification.q` queue (with dead-lettering) and the `cea` user on its RabbitMQ.
@@ -75,4 +74,4 @@ Ready when both answer 200:
 
 - **TIS → corridor.** `curl -s http://127.0.0.1:8660/corridor-data-synchronization-service/status`: route r1's `lastSync.outcome` is `succeeded`, `tisReachable` and `vppReachable` are true, and Face Matcher UI shows the `dxm.r1.flight.…` watchlists.
 - **Corridor → TIS.** A synced traveler passes a camera: the display shows the identification, `curl -s http://127.0.0.1:8090/corridor-hub/actuator/prometheus | grep hub_cea_export_total` counts published and acked, `curl -s http://127.0.0.1:8670/corridor-event-aggregation-service/status` shows a visit, and `CEA_PASSAGE_QUIET` later TIS has an Encounter at location `DSS_DEPLOYMENT_ID`.
-- **Typical failures.** `tisAuthRejected`: wrong or missing client secret. `tisReachable=false`: URL or network. Portrait download errors in `docker logs sceg-dss`: object store, relay or `publicEndpoint`.
+- **Typical failures.** `tisAuthRejected`: wrong or missing client secret. `tisReachable=false`: URL or network. Route r1's `lastSync.outcome` `degraded` with `stored object content failed` in `docker logs sceg-dss`: a TIS older than 0.34.0, or the portrait is missing in TIS.

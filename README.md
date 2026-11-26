@@ -12,7 +12,7 @@ Corridor and e-gate clearance on top of [Face Matcher](face-matcher/). The Hub t
 | CIGS                          | 0.5.0             | `.env` `CIGS_VERSION`     |
 | Face Matcher                  | v5_4.43.0.10149   | `face-matcher/.env` `VERSION` |
 | Face Matcher UI               | 2.1.2             | `face-matcher/.env` `FACE_MATCHER_UI_VERSION` |
-| DSS, CEA (optional)           | 0.3.1             | `dxm/.env` (see [dxm/](dxm/README.md)) |
+| DSS, CEA (optional)           | 0.4.0, 0.3.1      | `dxm/.env` (see [dxm/](dxm/README.md)) |
 
 Display 0.13.0 needs Hub 0.13.0; the fallback is 0.12.0 for both. Since Hub 0.12.0 identification comes from CIGS: with CIGS stopped or `CIGS_SOURCE_ENABLED=false` the Hub identifies no one and does not warn. Start order is CIGS, Hub, Display; compose waits for CIGS to be healthy before it starts the Hub.
 

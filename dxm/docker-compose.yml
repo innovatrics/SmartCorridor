@@ -1,5 +1,5 @@
 # DSS and CEA: a compose project of its own, so the corridor's start.sh (up --remove-orphans) leaves it alone.
-# docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d   (add --profile relay where needed, README.md)
+# docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d
 name: smart-corridor-dxm
 
 services:
@@ -42,26 +42,6 @@ services:
       CEA_DSS_DEPLOYMENT: ${DSS_DEPLOYMENT_ID:?set DSS_DEPLOYMENT_ID in dxm/.env}
       CEA_SCOPES: ${CEA_SCOPES}
       CEA_PASSAGE_QUIET: ${CEA_PASSAGE_QUIET}
-    extra_hosts: ["host.docker.internal:host-gateway"]
-
-  # Only where TIS's presign host does not resolve from this host.
-  tis-object-store:
-    image: nginxinc/nginx-unprivileged:1.29-alpine
-    container_name: sceg-tis-object-store
-    restart: unless-stopped
-    profiles: [relay]
-    environment:
-      LISTEN_PORT: "${TIS_OBJECT_STORE_PORT}"
-      UPSTREAM: "${TIS_OBJECT_STORE_UPSTREAM}"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        printf 'pid /tmp/nginx.pid;\nevents {}\nstream {\n  server {\n    listen %s;\n    proxy_pass %s;\n  }\n}\n' \
-          "$$LISTEN_PORT" "$$UPSTREAM" > /tmp/nginx.conf
-        exec nginx -c /tmp/nginx.conf -g 'daemon off;'
-    networks:
-      default:
-        aliases: ["${TIS_OBJECT_STORE_HOST}"]
     extra_hosts: ["host.docker.internal:host-gateway"]
 
 networks:
