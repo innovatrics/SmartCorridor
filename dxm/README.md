@@ -70,6 +70,8 @@ dxm/setup.sh                                                            # once, 
 docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d
 ```
 
+Afterwards `start.sh` starts DSS and CEA with the corridor, once `dxm/.env` is filled in and the secrets are in place; if something is missing it says what and starts the corridor without them. `stop.sh` stops them with the corridor.
+
 `setup.sh` creates CEA's database and role on the corridor's PostgreSQL, and the `cea.export` exchange, `cea.identification.q` queue (with dead-lettering) and the `cea` user on its RabbitMQ.
 
 Ready when both answer 200:
@@ -111,12 +113,12 @@ The chip photo is never copied. The members' labels hold only the copies' keys. 
    ```
 
 3. In `.env.hub`: `HUB_DOCUMENT_IMAGES_ENABLED=true`.
-4. `start.sh`, then `docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d`.
+4. `start.sh`, which restarts the Hub with its keys and starts DSS, CEA and the store.
 
 The DSS's next sync copies the scans after it has written the members. `/status` shows `storageReachable` true, and `docker logs sceg-dss` shows a `dss.images` line for each run that copied (`documentImagesCopied`). A person's detail in History shows the data page and the portrait crop.
 
 **How long a copy lives.** A copy is deleted with its member, by the DSS's deletion run, and in any case `DOCUMENT_IMAGES_EXPIRY_DAYS` after it was made. A member that stays longer gets its copies again with the next sync after they expired.
 
-**Switching them off.** Set `DOCUMENT_IMAGES=false` and `HUB_DOCUMENT_IMAGES_ENABLED=false`, then run `start.sh` and `up -d` again. The members lose their scan labels on the DSS's next write. While the endpoint and the bucket stay set and the store runs, the DSS still deletes the copies with their members; the rest expire.
+**Switching them off.** Set `DOCUMENT_IMAGES=false` and `HUB_DOCUMENT_IMAGES_ENABLED=false`, then run `start.sh` again. The members lose their scan labels on the DSS's next write. While the endpoint and the bucket stay set and the store runs, the DSS still deletes the copies with their members; the rest expire.
 
 **Deleting every copy.** `docker compose -p smart-corridor-dxm down` and `docker volume rm smart-corridor-dxm_documents-data`, or `factory-reset.sh`, which deletes the volume too. The identities stay in `DXM_SECRETS_DIR` until you delete the `documents-*` files.

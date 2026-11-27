@@ -3,7 +3,7 @@ set -e
 
 # Starts FaceMatcher (facematcher/), then the corridor services. With the gateway on (CORRIDOR_GATEWAY_ENABLED=true
 # in .env) also the corridor's Keycloak and the gateway, the only container that then publishes ports.
-# MCT is separate, see README.md.
+# DSS and CEA (dxm/) are started too once they are set up. MCT is separate, see README.md.
 
 # FaceMatcher UI shows no identification view in a corridor: the dashboard shows the matches.
 export FACE_MATCHER_UI_IDENTIFICATION=false
@@ -129,4 +129,31 @@ else
   echo "FaceMatcher UI    : http://localhost:8000"
   echo "REST API           : http://localhost:8098"
   echo "GraphQL API        : http://localhost:8097/graphql"
+fi
+
+# DSS and CEA (dxm/README.md) are a compose project of their own, which stop.sh stops with the corridor: started here
+# again once they are set up. Not set up (no TIS_BASE_URL in dxm/.env): nothing happens. Half set up: says what is
+# missing and leaves them alone; the corridor runs without them.
+dxm() { (cd ./dxm && setting "$1"); }
+if [ -n "$(dxm TIS_BASE_URL)" ]; then
+  MISSING=""
+  for key in TIS_TOKEN_URL DSS_TIS_CLIENT_ID CEA_TIS_CLIENT_ID DSS_DEPLOYMENT_ID DSS_WATCHLIST_ID; do
+    [ -n "$(dxm "$key")" ] || MISSING="${MISSING:+$MISSING,} $key (dxm/.env)"
+  done
+  for file in tis-dss.env tis-cea.env cea-local.env; do
+    [ -f "$DXM_SECRETS_DIR/$file" ] || MISSING="${MISSING:+$MISSING,} $DXM_SECRETS_DIR/$file"
+  done
+  # With document scans on, the store mounts its identities: without the file docker would create a folder there.
+  if [ "$(dxm COMPOSE_PROFILES)" = documents ] && [ ! -f "$DXM_SECRETS_DIR/documents-s3.json" ]; then
+    MISSING="${MISSING:+$MISSING,} $DXM_SECRETS_DIR/documents-s3.json (dxm/setup-documents.sh)"
+  fi
+  echo ""
+  if [ -n "$MISSING" ]; then
+    echo "WARNING: DSS and CEA not started, missing:$MISSING. See dxm/README.md." >&2
+  elif docker compose -f ./dxm/docker-compose.yml --env-file ./dxm/.env up -d; then
+    echo "DSS status         : http://localhost:$(dxm DSS_PORT)/corridor-data-synchronization-service/status"
+    echo "CEA status         : http://localhost:$(dxm CEA_PORT)/corridor-event-aggregation-service/status"
+  else
+    echo "WARNING: DSS and CEA did not start; the corridor runs without them. See dxm/README.md." >&2
+  fi
 fi
