@@ -56,7 +56,7 @@ CEA_EXPORT_EXCHANGE=cea.export
 
 ## Secrets
 
-Outside any repository, in `DXM_SECRETS_DIR` (default `~/.config/smart-corridor/dxm`, mode 700), each file mode 600, plain `KEY=value`, no quotes, no `$` in the value:
+Outside any repository, in `DXM_SECRETS_DIR` (default `~/.config/smart-corridor/dxm`, mode 700; set it in `dxm/.env` and, with the same value, in the root `.env`, where the Hub reads its document-scan identity), each file mode 600, plain `KEY=value`, no quotes, no `$` in the value:
 
 - `tis-dss.env`: `TIS_CLIENT_SECRET=<secret>`
 - `tis-cea.env`: `CEA_TIS_CLIENT_SECRET=<secret>`

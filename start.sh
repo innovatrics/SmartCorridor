@@ -12,8 +12,15 @@ setting() { grep -E "^$1=" ./.env | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r
 
 GATEWAY="$(setting CORRIDOR_GATEWAY_ENABLED)"
 
-# The Hub's document scan identity (dxm/README.md, "Document scans") is in DXM_SECRETS_DIR, set in dxm/.env.
+# The Hub's document scan identity (dxm/README.md, "Document scans") is in DXM_SECRETS_DIR, set in dxm/.env and,
+# for a plain `docker compose` that start.sh does not run, in .env. A difference would make such a restart read
+# another directory: with document scans on, the Hub then refuses to start.
 DXM_SECRETS_DIR="$(cd ./dxm && setting DXM_SECRETS_DIR)"
+DXM_SECRETS_DIR_ROOT="$(setting DXM_SECRETS_DIR)"
+if [ "$DXM_SECRETS_DIR" != "$DXM_SECRETS_DIR_ROOT" ]; then
+  echo "ERROR: DXM_SECRETS_DIR differs: '$DXM_SECRETS_DIR' in dxm/.env, '$DXM_SECRETS_DIR_ROOT' in .env. Set the same value in both." >&2
+  exit 1
+fi
 export DXM_SECRETS_DIR="${DXM_SECRETS_DIR//\$\{HOME\}/$HOME}"
 case "$GATEWAY" in
   true | false) ;;
