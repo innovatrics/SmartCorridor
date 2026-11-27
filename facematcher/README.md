@@ -205,7 +205,7 @@ A stack built on FaceMatcher may rely on the following. Everything else is inter
 | FaceMatcher UI | `face-matcher-ui:8000`                                                                              |
 | Admin image     | `${REGISTRY}admin:${VERSION}` from `.env`                                                            |
 | Start order     | FaceMatcher first. `run.sh` reads `FACE_MATCHER_UI_IDENTIFICATION` from the environment.            |
-| Ports           | A stack with its own entry point may run `run.sh` with `DEPENDENCIES_BIND_ADDRESS=127.0.0.1`: PostgreSQL, pgAdmin, RabbitMQ and S3 are then published on the host's loopback only. |
+| Ports           | A stack with its own entry point may run `run.sh` with `DEPENDENCIES_BIND_ADDRESS=127.0.0.1`: PostgreSQL, pgAdmin, RabbitMQ, S3 and the SeaweedFS Admin UI are then published on the host's loopback only. |
 
 Credentials are in `.env`.
 
