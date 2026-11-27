@@ -49,6 +49,7 @@ Before deploying, you will need:
 | SeaweedFS (S3)     | http://localhost:8333                       | admin / admin              |
 | SeaweedFS Admin    | http://localhost:23646                      | admin / Test1234           |
 | pgAdmin            | http://localhost:7070                       | admin@admin.com / Test1234 |
+| Feedback Display   | http://localhost:8087/corridor-feedback-display/display/&lt;id&gt; (optional, `feedback-display/`) |  |
 
 Without the gateway, ports are published on all interfaces with default credentials. Do not expose the host to an untrusted network.
 
@@ -66,6 +67,8 @@ Without the gateway, ports are published on all interfaces with default credenti
 **Zone notifications.** The Hub can emit `zone.*` events (entered, left, occupancy, counts) on the `corridorEvents` subscription. See the commented example in `.env.hub`.
 
 **Remote TIS (optional).** `dxm/` adds DSS, which syncs the enrolled travelers of a Traveler Identity Service into a FaceMatcher watchlist, and CEA, which reports corridor visits back to TIS as Encounters. See [dxm/README.md](dxm/README.md).
+
+**Feedback Display (optional).** `feedback-display/` adds the traveller-facing screen: GREEN, RED, BLUE, OCCLUDED and "Out of service" in full screen per display, for a tablet or a TV. It only reads from the Hub. See [feedback-display/README.md](feedback-display/README.md).
 
 **Document scans** (passport pages) in the display's person detail and History come from TIS through `dxm/`. They are off by default, and are switched on only where the deployment's owner has accepted copies of travel documents on this machine: see [dxm/README.md](dxm/README.md#document-scans-passport-pages-in-the-operational-display). The display works without them.
 

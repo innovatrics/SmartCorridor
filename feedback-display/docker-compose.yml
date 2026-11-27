@@ -1,0 +1,32 @@
+# Feedback Display (SASCE-115), optional: the traveller-facing screen. A compose project of its own, so the
+# corridor's start.sh (up --remove-orphans) leaves it alone. Once: feedback-display/setup.sh, then
+#   docker compose -f feedback-display/docker-compose.yml --env-file feedback-display/.env up -d
+# See feedback-display/README.md.
+name: smart-corridor-feedback-display
+
+services:
+  feedback-display:
+    image: ${REGISTRY}corridor-feedback-display:${FEEDBACK_DISPLAY_VERSION}
+    platform: linux/amd64
+    container_name: sceg-feedback-display
+    restart: unless-stopped
+    mem_limit: 1g
+    ports:
+      # The configuration API has no login yet (spec OQ6): this host only, unless FEEDBACK_DISPLAY_BIND says otherwise.
+      - "${FEEDBACK_DISPLAY_BIND:-127.0.0.1}:${FEEDBACK_DISPLAY_PORT:-8087}:8087"
+    env_file:
+      # The database login (SPRING_DATASOURCE_USERNAME / _PASSWORD), written by setup.sh.
+      - ${FEEDBACK_DISPLAY_SECRETS_DIR}/db.env
+    environment:
+      FEEDBACK_DISPLAY_HUB_URL: ws://sceg-hub:8090/corridor-hub/graphql
+      # FR-015's enrolment picture, from FaceMatcher as the Operation Display reads it.
+      FEEDBACK_DISPLAY_FACE_MATCHER_GRAPHQL_URL: http://graphql-api:8080
+      FEEDBACK_DISPLAY_FACE_MATCHER_API_URL: http://api:8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pgsql:5432/corridorfeedbackdisplay
+      # No trace collector in this package: without this the service logs a failed export every few seconds.
+      TRACING_ENABLED: "false"
+
+networks:
+  default:
+    name: face-matcher-network
+    external: true

@@ -7,5 +7,7 @@ export CORRIDOR_UID_GID="$(id -u):$(id -g)" CORRIDOR_HOST="${CORRIDOR_HOST:-$(ho
 # DSS, CEA and the document store (dxm/) if they run. The store's volume goes with them: every copy of a document
 # scan. DSS and CEA keep their data in FaceMatcher's volumes, which go below.
 docker compose -p smart-corridor-dxm down -v --rmi all 2>/dev/null || true
+# The Feedback Display (feedback-display/) if it runs; its database goes with FaceMatcher's PostgreSQL volume below.
+docker compose -p smart-corridor-feedback-display down --rmi all 2>/dev/null || true
 docker compose -f ./docker-compose.yml -f ./docker-compose.gateway.yml --env-file ./.env down -v --rmi all 2>/dev/null || true
 (cd ./facematcher && bash factory-reset.sh)
