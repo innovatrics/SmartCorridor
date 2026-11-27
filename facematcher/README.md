@@ -31,6 +31,7 @@ FaceMatcher UI is at http://localhost:8000. It opens without login.
 | GraphQL API     | http://localhost:8097/graphql |                            |
 | RabbitMQ        | http://localhost:15672        | guest / guest              |
 | SeaweedFS (S3)  | http://localhost:8333         | admin / admin              |
+| SeaweedFS Admin | http://localhost:23646        | admin / Test1234           |
 | pgAdmin         | http://localhost:7070         | admin@admin.com / Test1234 |
 
 Ports are published on all interfaces with default credentials. Do not expose the host to an untrusted network.
@@ -122,13 +123,13 @@ FaceMatcher UI has the login on by default. The line `KEYCLOAK_AUTHENTICATION_EN
 - The login protects FaceMatcher UI only. The REST and GraphQL APIs on ports 8098 and 8097 have no authentication, so whoever reaches them goes around the login. A standalone FaceMatcher may turn their authentication on, never a SmartCorridor: in `.env`, section 3.3, `Authentication__UseAuthentication=true`, `Authentication__Authority=<KEYCLOAK_DOMAIN>/realms/<KEYCLOAK_REALM>` and `Authentication__Audience=face-matcher`; in Keycloak, an Audience mapper on the UI's client that adds `face-matcher` to its access tokens. The UI then calls the APIs with the token of the signed-in user. With a Keycloak certificate from a private authority, the APIs have to trust it as well, otherwise they refuse every token (HTTP 401): with the authority's certificate in `secrets/tls/ca.crt`, uncomment the `environment` and `volumes` lines at `api` and at `graphql-api` in `docker-compose.override.yml`.
 - With `VIDEO_WITHOUT_LOGIN=true` the live camera video is readable without login.
 - Between the UI and the APIs the traffic, the user's token included, is plain HTTP on the compose network.
-- RabbitMQ, the S3 storage, PostgreSQL and pgAdmin stay published on all interfaces with default credentials. Change the credentials and restrict the ports.
+- RabbitMQ, the S3 storage, the SeaweedFS Admin UI, PostgreSQL and pgAdmin stay published on all interfaces with default credentials. Change the credentials and restrict the ports.
 
 ## Changes to the release package
 
 - `docker-compose.yml`, `.env` - `grouping` and `video-*` services and their settings removed
 - `.env` - `REGISTRY` points to Harbor; `Notifications__IncludeTemplates=true`; `Milvus__*` removed; section 4 added
-- `dependencies/docker-compose.yml` - Milvus removed; RabbitMQ pinned to 4.3.6 with `queue_master_locator` permitted; one SeaweedFS data mount; the published ports bind to `DEPENDENCIES_BIND_ADDRESS` when it is set in the environment of `run.sh`
+- `dependencies/docker-compose.yml` - Milvus removed; RabbitMQ pinned to 4.3.6 with `queue_master_locator` permitted; one SeaweedFS data mount; `seaweedfs-admin` (SeaweedFS Admin UI) added; the published ports bind to `DEPENDENCIES_BIND_ADDRESS` when it is set in the environment of `run.sh`
 - `run.sh` - license from `secrets/` and the endpoint summary added; Milvus wait removed
 - `deployment-common.sh` - Milvus wait removed
 - `sync-embeddings-to-vector-db.sh`, `migrate-palms.sh`, `finalize-non-migrated-palms.sh` - deleted

@@ -43,6 +43,7 @@ Before deploying, you will need:
 | GraphQL API        | http://localhost:8097/graphql               |                            |
 | RabbitMQ           | http://localhost:15672                      | guest / guest              |
 | SeaweedFS (S3)     | http://localhost:8333                       | admin / admin              |
+| SeaweedFS Admin    | http://localhost:23646                      | admin / Test1234           |
 | pgAdmin            | http://localhost:7070                       | admin@admin.com / Test1234 |
 
 Without the gateway, ports are published on all interfaces with default credentials. Do not expose the host to an untrusted network.
@@ -73,7 +74,7 @@ With `CORRIDOR_GATEWAY_ENABLED=true` in `.env`, `start.sh` puts Envoy and the co
 | 8443 | Keycloak                 | login pages and tokens                                          |
 | 8883 | MQTT over TLS            | the broker's own credentials                                    |
 
-PostgreSQL, pgAdmin, RabbitMQ and S3 are published on loopback only; nothing else is published.
+PostgreSQL, pgAdmin, RabbitMQ, S3 and the SeaweedFS Admin UI are published on loopback only; nothing else is published.
 
 To turn it on:
 
