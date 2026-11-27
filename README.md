@@ -7,11 +7,15 @@ Corridor and e-gate clearance on top of [FaceMatcher](facematcher/). The Hub tur
 
 | Component                     | Version           | Set in                  |
 | ----------------------------- | ----------------- | ----------------------- |
-| Corridor Hub                  | 0.10.0            | `.env` `HUB_VERSION`      |
-| Operational display           | 0.10.0            | `.env` `FRONTEND_VERSION` |
+| Corridor Hub                  | 0.13.0            | `.env` `HUB_VERSION`      |
+| Operational display           | 0.13.1            | `.env` `FRONTEND_VERSION` |
 | CIGS                          | 0.5.0             | `.env` `CIGS_VERSION`     |
-| FaceMatcher                  | v5_4.43.0.10149   | `facematcher/.env` `VERSION` |
-| FaceMatcher UI               | 2.1.1             | `facematcher/.env` `FACE_MATCHER_UI_VERSION` |
+| Signal controller (LED stripes) | 0.0.1           | `.env` `SIGNAL_CONTROLLER_VERSION` |
+| FaceMatcher                   | v5_4.43.0.10149   | `facematcher/.env` `VERSION` |
+| FaceMatcher UI                | 2.1.2             | `facematcher/.env` `FACE_MATCHER_UI_VERSION` |
+| DSS, CEA (optional)           | 0.4.0, 0.3.1      | `dxm/.env` (see [dxm/](dxm/README.md)) |
+
+Display 0.13.x needs Hub 0.13.0 (0.13.1 fixes a flickering Full Frame in the detail); the fallback is 0.12.0 for both. Since Hub 0.12.0 identification comes from CIGS: with CIGS stopped or `CIGS_SOURCE_ENABLED=false` the Hub identifies no one and does not warn. Start order is CIGS, Hub, Display; compose waits for CIGS to be healthy before it starts the Hub.
 
 # Deployment
 
@@ -22,7 +26,7 @@ Before deploying, you will need:
 
 ## License
 
-- Identify the hardware id (hwid) of your machine with `docker run --rm registry.dot.innovatrics.com/vpp/license-manager:3.2.7`.
+- Identify the hardware id (hwid) of your machine with `docker run --rm registry.dot.innovatrics.com/border-control/vpp/license-manager:3.2.7`.
 - Obtain a license with the `smart_corridor` block for your hwid from the [Customer Portal](https://customerportal.innovatrics.com/) (bought, or a trial from your Innovatrics sales representative).
 - Copy `iengine.lic` to `secrets/`.
 
@@ -52,11 +56,18 @@ Without the gateway, ports are published on all interfaces with default credenti
 
 - `.env` - corridor image versions, dashboard port, gateway switch (`CORRIDOR_GATEWAY_ENABLED`, `CORRIDOR_HOST`)
 - `.env.hub` - Hub settings, documented inline: denied watchlists, dead-letter expiry, database, corridor units and cameras, storage, zone notifications
+- `.env.signal-controller` - the pole LED stripes (Shelly Pro RGBWW), documented inline: one block per Shelly (address, password, cameras, which outcomes it shows), idle light
 - `facematcher/` - a copy of the [FaceMatcher](facematcher/README.md) repository. Do not edit it, except `facematcher/.env.face-matcher-ui`, which carries the SmartCorridor watchlist member labels (`WATCHLIST_MEMBER_KEY_n` / `WATCHLIST_MEMBER_LABEL_n`).
 
 **Clearance.** Every watchlist match is GREEN unless its watchlist is listed in `VPP_ADAPTER_DENIED_WATCHLISTS` (ids or globs such as `red.*`); then it is RED. `*` makes every match RED.
 
+**Signal devices.** The signal controller lights the pole's LED stripe from the Hub's clearance decisions: GREEN, BLUE for a traveller not identified, RED; blinking orange when it has lost the Hub, a dimmed white when idle. It needs Hub 0.12.0 or later. Add each Shelly in `.env.signal-controller` and restart with `start.sh`; it publishes no port. See the [signal controller](https://gitlab.ba.innovatrics.net/border-control/corridor-signal-controller) for every setting.
+
 **Zone notifications.** The Hub can emit `zone.*` events (entered, left, occupancy, counts) on the `corridorEvents` subscription. See the commented example in `.env.hub`.
+
+**Remote TIS (optional).** `dxm/` adds DSS, which syncs the enrolled travelers of a Traveler Identity Service into a FaceMatcher watchlist, and CEA, which reports corridor visits back to TIS as Encounters. See [dxm/README.md](dxm/README.md).
+
+**Document scans** (passport pages) in the display's person detail and History come from TIS through `dxm/`. They are off by default, and are switched on only where the deployment's owner has accepted copies of travel documents on this machine: see [dxm/README.md](dxm/README.md#document-scans-passport-pages-in-the-operational-display). The display works without them.
 
 **Upgrading from a package with `face-matcher/`.** The vendored copy is now in `facematcher/`. Containers, network and volumes keep their names, so data stays. After the update, carry over your own edits of `face-matcher/.env.face-matcher-ui` and anything you put in `face-matcher/secrets/` (other than the `iengine.lic` link, which `start.sh` recreates) into `facematcher/`, then delete `face-matcher/`.
 

@@ -7,10 +7,17 @@ services:
     restart: unless-stopped
     # The buildpack sizes the JVM from this limit; without one it takes the memory free at container start.
     mem_limit: 2g
+    # Start order CIGS, Hub, Display: the Hub identifies through CIGS (Hub ≥ 0.12.0).
+    depends_on:
+      cigs:
+        condition: service_healthy
     ports:
       - "8090:8090"
     env_file:
       - ./.env.hub
+      # Document scans only (dxm/README.md): the Hub's read identity and namespace, written by dxm/setup-documents.sh.
+      - path: ${DXM_SECRETS_DIR:-/nonexistent}/documents-hub.env
+        required: false
     environment:
       STORAGE_S3_ENDPOINT: http://seaweedfs:8333
     # Requires the smart_corridor.hub license block.
@@ -83,6 +90,24 @@ services:
     # Requires the smart_corridor.operational_display license block.
     volumes:
       - ./secrets/iengine.lic:/etc/innovatrics/iengine.lic:ro
+
+  # LED stripes on the pole (Shelly Pro RGBWW): traveller signals from the Hub's clearance decisions. Headless,
+  # no port published: its state API has no access control yet. Devices are set in .env.signal-controller;
+  # without any it runs and does nothing.
+  signal-controller:
+    image: ${REGISTRY}corridor-signal-controller:${SIGNAL_CONTROLLER_VERSION}
+    container_name: sceg-signal-controller
+    restart: unless-stopped
+    # The buildpack sizes the JVM from this limit.
+    mem_limit: 1g
+    depends_on:
+      hub:
+        condition: service_started
+        restart: true
+    env_file:
+      - ./.env.signal-controller
+    environment:
+      SIGNAL_CONTROLLER_HUB_URL: ws://sceg-hub:8090/corridor-hub/graphql
 
 volumes:
   cigs-settings:

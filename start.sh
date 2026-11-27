@@ -11,6 +11,10 @@ export FACE_MATCHER_UI_IDENTIFICATION=false
 setting() { grep -E "^$1=" ./.env | head -n1 | cut -d '=' -f2- | sed -E -e 's/\r$//' -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]+$//'; }
 
 GATEWAY="$(setting CORRIDOR_GATEWAY_ENABLED)"
+
+# The Hub's document scan identity (dxm/README.md, "Document scans") is in DXM_SECRETS_DIR, set in dxm/.env.
+DXM_SECRETS_DIR="$(cd ./dxm && setting DXM_SECRETS_DIR)"
+export DXM_SECRETS_DIR="${DXM_SECRETS_DIR//\$\{HOME\}/$HOME}"
 case "$GATEWAY" in
   true | false) ;;
   *) echo "ERROR: CORRIDOR_GATEWAY_ENABLED in .env must be true or false, not '$GATEWAY'. See README.md." >&2; exit 1 ;;

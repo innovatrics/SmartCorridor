@@ -1,0 +1,86 @@
+# DSS and CEA: a compose project of its own, so the corridor's start.sh (up --remove-orphans) leaves it alone.
+# docker compose -f dxm/docker-compose.yml --env-file dxm/.env up -d
+# The document store (service documents) runs only with document scans switched on: COMPOSE_PROFILES=documents in
+# dxm/.env (README.md, "Document scans").
+name: smart-corridor-dxm
+
+services:
+  dss:
+    image: ${REGISTRY}corridor-data-synchronization-service:${DSS_VERSION}
+    platform: linux/amd64
+    container_name: sceg-dss
+    restart: unless-stopped
+    # ONE instance, never scaled: one run coordinator owns this FaceMatcher's DSS watchlists.
+    mem_limit: 1g
+    ports: ["127.0.0.1:${DSS_PORT}:8660"]
+    env_file:
+      - ./dss.env
+      - ${DXM_SECRETS_DIR}/tis-dss.env          # TIS_CLIENT_SECRET=…
+      # Document scans only: the DSS's storage identity, written by setup-documents.sh. Without it, as before.
+      - path: ${DXM_SECRETS_DIR}/documents-dss.env
+        required: false
+    environment:
+      TIS_BASE_URL: ${TIS_BASE_URL:?set TIS_BASE_URL in dxm/.env}
+      TIS_AUTH_MODE: clientCredentials
+      TIS_TOKEN_URL: ${TIS_TOKEN_URL:?set TIS_TOKEN_URL in dxm/.env}
+      TIS_CLIENT_ID: ${DSS_TIS_CLIENT_ID:?set DSS_TIS_CLIENT_ID in dxm/.env}
+      DSS_DEPLOYMENT_ID: ${DSS_DEPLOYMENT_ID:?set DSS_DEPLOYMENT_ID in dxm/.env}
+      ROUTE_1_DESTINATION: ${DSS_WATCHLIST_ID:?create the watchlist and set DSS_WATCHLIST_ID in dxm/.env (dxm/README.md)}
+      # Document scans, off unless switched on in dxm/.env (README.md, "Document scans"). The DSS reads an empty value
+      # as unset: without the endpoint and the bucket it never calls the store.
+      DOCUMENT_IMAGES: ${DOCUMENT_IMAGES:-false}
+      DOCUMENT_IMAGES_STORAGE_ENDPOINT: ${DOCUMENT_IMAGES_STORAGE_ENDPOINT:-}
+      DOCUMENT_IMAGES_STORAGE_BUCKET: ${DOCUMENT_IMAGES_STORAGE_BUCKET:-}
+      DOCUMENT_IMAGES_EXPIRY_DAYS: ${DOCUMENT_IMAGES_EXPIRY_DAYS:-30}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  cea:
+    image: ${REGISTRY}corridor-event-aggregation-service:${CEA_VERSION}
+    platform: linux/amd64
+    container_name: sceg-cea
+    restart: unless-stopped
+    # ONE instance, never scaled: one intake thread decides visits in arrival order.
+    mem_limit: 1g
+    ports: ["127.0.0.1:${CEA_PORT}:8670"]
+    env_file:
+      - ./cea.env
+      - ${DXM_SECRETS_DIR}/tis-cea.env          # CEA_TIS_CLIENT_SECRET=…
+      - ${DXM_SECRETS_DIR}/cea-local.env        # CEA_DB_PASSWORD, CEA_AMQP_PASSWORD, CEA_ADMIN_TOKEN
+    environment:
+      CEA_TIS_BASE_URL: ${TIS_BASE_URL:?set TIS_BASE_URL in dxm/.env}
+      CEA_TIS_AUTH_MODE: clientCredentials
+      CEA_TIS_TOKEN_URL: ${TIS_TOKEN_URL:?set TIS_TOKEN_URL in dxm/.env}
+      CEA_TIS_CLIENT_ID: ${CEA_TIS_CLIENT_ID:?set CEA_TIS_CLIENT_ID in dxm/.env}
+      CEA_DSS_DEPLOYMENT: ${DSS_DEPLOYMENT_ID:?set DSS_DEPLOYMENT_ID in dxm/.env}
+      CEA_SCOPES: ${CEA_SCOPES}
+      CEA_PASSAGE_QUIET: ${CEA_PASSAGE_QUIET}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  # The copies of the passport scans (README.md, "Document scans"): an S3 store of their own, apart from FaceMatcher's
+  # SeaweedFS, so that they expire by their own rule, are deleted with their own volume and never mix with
+  # FaceMatcher's data. 4.23 is the version the DSS's lifecycle and identity checks were verified on. Identities from
+  # setup-documents.sh; no port is published: only the DSS and the Hub reach it, on face-matcher-network.
+  documents:
+    image: chrislusf/seaweedfs:4.23
+    container_name: sceg-documents
+    profiles: [documents]
+    restart: unless-stopped
+    mem_limit: 256m
+    # The image's entrypoint drops to a user that cannot read the identity file (600).
+    entrypoint: ["/usr/bin/weed"]
+    command: >-
+      server -s3 -s3.config=/etc/seaweedfs/s3.json -filer=true -dir=/data
+      -master.volumeSizeLimitMB=256 -volume.max=64
+    environment:
+      WEED_MASTER_VOLUME_GROWTH_COPY_1: "1"
+    volumes:
+      - documents-data:/data
+      - ${DXM_SECRETS_DIR}/documents-s3.json:/etc/seaweedfs/s3.json:ro
+
+volumes:
+  documents-data:
+
+networks:
+  default:
+    name: face-matcher-network
+    external: true
