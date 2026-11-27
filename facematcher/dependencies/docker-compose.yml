@@ -94,9 +94,27 @@ services:
       default:
         aliases:
           - seaweedfs
+  # SeaweedFS Admin UI (`weed admin`, Apache-2.0, part of the open-source image).
+  # Web UI for cluster topology, volumes, buckets and a file browser.
+  seaweedfs-admin:
+    extends:
+      service: common
+      file: docker-compose-common.yml
+    image: chrislusf/seaweedfs:4.16
+    container_name: seaweedfs-admin
+    restart: unless-stopped
+    depends_on:
+      - seaweedfs
+    ports:
+      - "${DEPENDENCIES_BIND_ADDRESS:+${DEPENDENCIES_BIND_ADDRESS}:}23646:23646" # Admin UI
+    entrypoint: ["/usr/bin/weed"]
+    command: admin -port=23646 -master=seaweedfs:9333 -dataDir=/data -adminUser=admin -adminPassword=Test1234
+    volumes:
+      - seaweedfsadmindata:/data
 volumes:
   pgsqldata:
   seaweedfsdata:
+  seaweedfsadmindata:
 networks:
   default:
     name: face-matcher-network
